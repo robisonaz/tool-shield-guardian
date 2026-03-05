@@ -16,10 +16,10 @@ const Index = () => {
     setTools(getStoredTools());
   }, []);
 
-  const handleAdd = async (name: string, version: string) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
-    const entry = await addTool(name, version);
+    const entry = await addTool(name, version, sourceUrl);
     setTools(getStoredTools());
 
     if (entry.isOutdated === null) {
