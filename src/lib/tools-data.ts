@@ -44,33 +44,73 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-async function fetchLatestVersion(toolName: string, version: string): Promise<{
+const PRODUCT_SLUGS: Record<string, string> = {
+  gitlab: "gitlab", jenkins: "jenkins", kubernetes: "kubernetes", nginx: "nginx",
+  docker: "docker-engine", terraform: "hashicorp-terraform", sonarqube: "sonarqube",
+  apache: "apache-http-server", nodejs: "nodejs", python: "python", openssl: "openssl",
+  postgresql: "postgresql", mysql: "mysql", redis: "redis", elasticsearch: "elasticsearch",
+  mongodb: "mongodb", grafana: "grafana", prometheus: "prometheus", tomcat: "apache-tomcat",
+  rabbitmq: "rabbitmq", vault: "hashicorp-vault", consul: "hashicorp-consul",
+  ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
+};
+
+async function fetchVersionInfo(toolName: string, version: string): Promise<{
   latestVersion: string | null;
   latestPatchForCycle: string | null;
   eol: string | boolean | null;
   lts: string | boolean | null;
   cycleLabel: string | null;
 }> {
-  try {
-    const { data, error } = await supabase.functions.invoke("version-check", {
-      body: { toolName, version },
-    });
+  const empty = { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
+  const slug = PRODUCT_SLUGS[toolName.toLowerCase().trim()];
+  if (!slug) return empty;
 
-    if (error) {
-      console.error("Error calling version-check:", error);
-      return { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
+  try {
+    // Fetch all cycles from endoflife.date (public CORS-enabled API)
+    const res = await fetch(`https://endoflife.date/api/${slug}.json`);
+    if (!res.ok) return empty;
+    const cycles = await res.json();
+
+    const latestVersion = cycles?.[0]?.latest || cycles?.[0]?.cycle || null;
+    const vParts = version.split(".");
+
+    let latestPatchForCycle: string | null = null;
+    let eol: any = null;
+    let lts: any = null;
+    let cycleLabel: string | null = null;
+
+    // Try exact major.minor match
+    for (const c of cycles) {
+      const cStr = String(c.cycle);
+      const cParts = cStr.split(".");
+      if (cParts[0] === vParts[0]) {
+        if (cParts.length === 1 || vParts.length === 1 || cParts[1] === vParts[1]) {
+          latestPatchForCycle = c.latest || null;
+          eol = c.eol ?? null;
+          lts = c.lts ?? null;
+          cycleLabel = cStr;
+          break;
+        }
+      }
     }
 
-    return {
-      latestVersion: data?.latestVersion || null,
-      latestPatchForCycle: data?.latestPatchForCycle || null,
-      eol: data?.eol ?? null,
-      lts: data?.lts ?? null,
-      cycleLabel: data?.cycleLabel || null,
-    };
+    // Fallback: first cycle with same major
+    if (!latestPatchForCycle) {
+      for (const c of cycles) {
+        if (String(c.cycle).split(".")[0] === vParts[0]) {
+          latestPatchForCycle = c.latest || null;
+          eol = c.eol ?? null;
+          lts = c.lts ?? null;
+          cycleLabel = String(c.cycle);
+          break;
+        }
+      }
+    }
+
+    return { latestVersion, latestPatchForCycle, eol, lts, cycleLabel };
   } catch (err) {
-    console.error("Failed to fetch latest version:", err);
-    return { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
+    console.error("Failed to fetch version info:", err);
+    return empty;
   }
 }
 
@@ -131,9 +171,9 @@ export async function addTool(name: string, version: string): Promise<ToolEntry>
   tools.unshift(entry);
   saveTools(tools);
 
-  // Fetch latest version AND CVEs in parallel
+  // Fetch version info AND CVEs in parallel
   const [versionResult, cves] = await Promise.all([
-    fetchLatestVersion(name, version),
+    fetchVersionInfo(name, version),
     fetchCVEsFromNVD(name, version),
   ]);
 
