@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ToolTableProps {
   tools: ToolEntry[];
   onRemove: (id: string) => void;
-  onEdit: (id: string, name: string, version: string) => void;
+  onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
 }
 
 function EolBadge({ eol }: { eol: string | boolean | null }) {
@@ -43,22 +43,24 @@ function LtsBadge({ lts }: { lts: string | boolean | null }) {
   );
 }
 
-function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: string) => void; onEdit: (id: string, name: string, version: string) => void }) {
+function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: string) => void; onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
+  const [editUrl, setEditUrl] = useState(tool.sourceUrl || "");
   const status = tool.isOutdated === null ? "unknown" : tool.isOutdated ? "outdated" : "current";
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
-    onEdit(tool.id, editName.trim(), editVersion.trim());
+    onEdit(tool.id, editName.trim(), editVersion.trim(), editUrl.trim() || undefined);
     setEditing(false);
   };
 
   const handleCancelEdit = () => {
     setEditName(tool.name);
     setEditVersion(tool.version);
+    setEditUrl(tool.sourceUrl || "");
     setEditing(false);
   };
 
@@ -102,13 +104,24 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
         <td className="px-4 py-3 text-accent">
           {editing ? (
-            <Input
-              value={editVersion}
-              onChange={(e) => setEditVersion(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-              className="h-7 text-sm bg-secondary border-border w-24"
-            />
+            <div className="space-y-1">
+              <Input
+                value={editVersion}
+                onChange={(e) => setEditVersion(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-24"
+                placeholder="Versão"
+              />
+              <Input
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-40"
+                placeholder="URL (opcional)"
+              />
+            </div>
           ) : (
             tool.version
           )}

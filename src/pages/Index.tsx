@@ -43,9 +43,9 @@ const Index = () => {
     toast.info("Ferramenta removida.");
   };
 
-  const handleEdit = async (id: string, name: string, version: string) => {
+  const handleEdit = async (id: string, name: string, version: string, sourceUrl?: string) => {
     toast.info(`Atualizando "${name} ${version}"...`);
-    await updateTool(id, name, version);
+    await updateTool(id, name, version, sourceUrl);
     setTools(getStoredTools());
     toast.success(`"${name} ${version}" atualizada com sucesso!`);
   };
