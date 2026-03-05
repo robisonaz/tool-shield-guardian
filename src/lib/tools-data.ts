@@ -206,6 +206,68 @@ export function removeTool(id: string) {
   saveTools(tools);
 }
 
+export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
+  const [versionResult, cves] = await Promise.all([
+    fetchVersionInfo(tool.name, tool.version),
+    fetchCVEsFromNVD(tool.name, tool.version),
+  ]);
+
+  const updated: ToolEntry = {
+    ...tool,
+    latestVersion: versionResult.latestVersion,
+    latestPatchForCycle: versionResult.latestPatchForCycle,
+    eol: versionResult.eol,
+    lts: versionResult.lts,
+    cycleLabel: versionResult.cycleLabel,
+    isOutdated: versionResult.latestVersion
+      ? compareVersions(tool.version, versionResult.latestVersion) < 0
+      : null,
+    isPatchOutdated: versionResult.latestPatchForCycle
+      ? compareVersions(tool.version, versionResult.latestPatchForCycle) < 0
+      : null,
+    cves,
+    loading: false,
+  };
+
+  const tools = getStoredTools().map(t => t.id === updated.id ? updated : t);
+  saveTools(tools);
+  return updated;
+}
+
+export async function updateTool(id: string, name: string, version: string): Promise<ToolEntry> {
+  const tools = getStoredTools();
+  const existing = tools.find(t => t.id === id);
+  if (!existing) throw new Error("Tool not found");
+
+  existing.name = name.trim();
+  existing.version = version.trim();
+  existing.loading = true;
+  saveTools(tools);
+
+  const [versionResult, cves] = await Promise.all([
+    fetchVersionInfo(name, version),
+    fetchCVEsFromNVD(name, version),
+  ]);
+
+  existing.latestVersion = versionResult.latestVersion;
+  existing.latestPatchForCycle = versionResult.latestPatchForCycle;
+  existing.eol = versionResult.eol;
+  existing.lts = versionResult.lts;
+  existing.cycleLabel = versionResult.cycleLabel;
+  existing.isOutdated = versionResult.latestVersion
+    ? compareVersions(version, versionResult.latestVersion) < 0
+    : null;
+  existing.isPatchOutdated = versionResult.latestPatchForCycle
+    ? compareVersions(version, versionResult.latestPatchForCycle) < 0
+    : null;
+  existing.cves = cves;
+  existing.loading = false;
+
+  const updatedTools = getStoredTools().map(t => t.id === id ? existing : t);
+  saveTools(updatedTools);
+  return existing;
+}
+
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>
   k.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 );
