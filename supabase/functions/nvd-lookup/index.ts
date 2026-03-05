@@ -94,11 +94,10 @@ serve(async (req) => {
     let url: string;
     
     if (cpeEntry) {
-      // Use CPE-based search for accurate version-specific results
-      // Try exact version first with virtualMatchString
-      const cpeName = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${version}:*:*:*:*:*:*:*`;
-      url = `${NVD_API_BASE}?cpeName=${encodeURIComponent(cpeName)}&resultsPerPage=50`;
-      console.log(`Fetching NVD API (CPE): ${url}`);
+      // Use virtualMatchString for version range matching (catches CVEs affecting this version)
+      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${version}`;
+      url = `${NVD_API_BASE}?virtualMatchString=${encodeURIComponent(cpeMatch)}&resultsPerPage=50`;
+      console.log(`Fetching NVD API (virtualMatchString): ${url}`);
     } else {
       // Fallback to keyword search for unmapped tools
       const keywordSearch = `${toolName} ${version}`;
