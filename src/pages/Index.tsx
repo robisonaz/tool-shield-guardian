@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, RefreshCw, Settings, LogOut } from "lucide-react";
 import { AddToolForm } from "@/components/AddToolForm";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
 import { addTool, getStoredTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
