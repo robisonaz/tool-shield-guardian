@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import type { ToolEntry } from "@/lib/tools-data";
+import { AVAILABLE_TOOLS } from "@/lib/tools-data";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ToolTableProps {
   tools: ToolEntry[];
   onRemove: (id: string) => void;
+  onEdit: (id: string, name: string, version: string) => void;
 }
 
 function EolBadge({ eol }: { eol: string | boolean | null }) {
@@ -40,15 +43,30 @@ function LtsBadge({ lts }: { lts: string | boolean | null }) {
   );
 }
 
-function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) => void }) {
+function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: string) => void; onEdit: (id: string, name: string, version: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(tool.name);
+  const [editVersion, setEditVersion] = useState(tool.version);
   const status = tool.isOutdated === null ? "unknown" : tool.isOutdated ? "outdated" : "current";
+
+  const handleSaveEdit = () => {
+    if (!editName.trim() || !editVersion.trim()) return;
+    onEdit(tool.id, editName.trim(), editVersion.trim());
+    setEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditName(tool.name);
+    setEditVersion(tool.version);
+    setEditing(false);
+  };
 
   return (
     <>
       <tr
         className="border-b border-border hover:bg-secondary/50 cursor-pointer transition-colors"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => !editing && setExpanded(!expanded)}
       >
         <td className="px-4 py-3">
           {(tool.cves.length > 0 || tool.latestPatchForCycle) ? (
@@ -58,13 +76,38 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
           )}
         </td>
         <td className="px-4 py-3 font-medium">
-          <div className="flex items-center gap-2">
-            {tool.name}
-            <LtsBadge lts={tool.lts} />
-            <EolBadge eol={tool.eol} />
-          </div>
+          {editing ? (
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-7 text-sm bg-secondary border-border w-40"
+              list="edit-tool-suggestions"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              {tool.name}
+              <LtsBadge lts={tool.lts} />
+              <EolBadge eol={tool.eol} />
+            </div>
+          )}
+          <datalist id="edit-tool-suggestions">
+            {AVAILABLE_TOOLS.map(t => <option key={t} value={t} />)}
+          </datalist>
         </td>
-        <td className="px-4 py-3 text-accent">{tool.version}</td>
+        <td className="px-4 py-3 text-accent">
+          {editing ? (
+            <Input
+              value={editVersion}
+              onChange={(e) => setEditVersion(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+              className="h-7 text-sm bg-secondary border-border w-24"
+            />
+          ) : (
+            tool.version
+          )}
+        </td>
         <td className="px-4 py-3 text-muted-foreground">{tool.latestVersion || "—"}</td>
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
         <td className="px-4 py-3">
@@ -81,14 +124,47 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
           )}
         </td>
         <td className="px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); onRemove(tool.id); }}
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {editing ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }}
+                  className="text-success hover:text-success hover:bg-success/10 h-8 w-8 p-0"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+                  className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); onRemove(tool.id); }}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </td>
       </tr>
       <AnimatePresence>
@@ -182,7 +258,7 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
   );
 }
 
-export function ToolTable({ tools, onRemove }: ToolTableProps) {
+export function ToolTable({ tools, onRemove, onEdit }: ToolTableProps) {
   if (tools.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
@@ -205,12 +281,12 @@ export function ToolTable({ tools, onRemove }: ToolTableProps) {
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
-              <th className="px-4 py-3 w-12" />
+              <th className="px-4 py-3 w-24" />
             </tr>
           </thead>
           <tbody>
             {tools.map((tool) => (
-              <ToolRow key={tool.id} tool={tool} onRemove={onRemove} />
+              <ToolRow key={tool.id} tool={tool} onRemove={onRemove} onEdit={onEdit} />
             ))}
           </tbody>
         </table>
