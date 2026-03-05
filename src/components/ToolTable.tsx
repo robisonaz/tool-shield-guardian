@@ -138,7 +138,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
                 }, "low" as "critical" | "high" | "medium" | "low");
                 const config = {
                   critical: { color: "text-destructive", icon: AlertTriangle },
-                  high: { color: "text-pink-400", icon: AlertTriangle },
+                  high: { color: "text-high", icon: AlertTriangle },
                   medium: { color: "text-warning", icon: AlertTriangle },
                   low: { color: "text-muted-foreground", icon: Shield },
                 };
@@ -151,7 +151,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
                   <span className="h-2 w-2 rounded-full bg-destructive" title="Critical" />
                 )}
                 {tool.cves.some(c => c.severity === "high") && (
-                  <span className="h-2 w-2 rounded-full bg-pink-400" title="High" />
+                  <span className="h-2 w-2 rounded-full bg-high" title="High" />
                 )}
                 {tool.cves.some(c => c.severity === "medium") && (
                   <span className="h-2 w-2 rounded-full bg-warning" title="Medium" />

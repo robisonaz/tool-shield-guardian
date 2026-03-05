@@ -6,7 +6,7 @@ interface SeverityBadgeProps {
 
 const config = {
   critical: { label: "CRITICAL", className: "bg-destructive/20 text-destructive border-destructive/40 animate-pulse-glow" },
-  high: { label: "HIGH", className: "bg-destructive/15 text-destructive/80 border-destructive/30" },
+  high: { label: "HIGH", className: "bg-high/15 text-high border-high/30" },
   medium: { label: "MEDIUM", className: "bg-warning/20 text-warning border-warning/30" },
   low: { label: "LOW", className: "bg-muted text-muted-foreground border-border" },
 };
