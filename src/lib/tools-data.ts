@@ -29,6 +29,7 @@ const SUPPORTED_TOOLS = [
   "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
+  "zabbix server", "zabbix agent", "zabbix proxy",
 ];
 
 function compareVersions(a: string, b: string): number {
@@ -52,6 +53,8 @@ const PRODUCT_SLUGS: Record<string, string> = {
   mongodb: "mongodb", grafana: "grafana", prometheus: "prometheus", tomcat: "apache-tomcat",
   rabbitmq: "rabbitmq", vault: "hashicorp-vault", consul: "hashicorp-consul",
   ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
+  "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
+  zabbix: "zabbix",
 };
 
 async function fetchVersionInfo(toolName: string, version: string): Promise<{
@@ -203,4 +206,6 @@ export function removeTool(id: string) {
   saveTools(tools);
 }
 
-export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k => k.charAt(0).toUpperCase() + k.slice(1));
+export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>
+  k.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+);
