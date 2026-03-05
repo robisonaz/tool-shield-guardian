@@ -8,6 +8,42 @@ const corsHeaders = {
 
 const NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 
+// CPE vendor:product mappings for accurate CVE lookups
+const CPE_MAP: Record<string, { vendor: string; product: string }> = {
+  zabbix: { vendor: "zabbix", product: "zabbix" },
+  "zabbix server": { vendor: "zabbix", product: "zabbix" },
+  "zabbix agent": { vendor: "zabbix", product: "zabbix" },
+  "zabbix proxy": { vendor: "zabbix", product: "zabbix" },
+  gitlab: { vendor: "gitlab", product: "gitlab" },
+  jenkins: { vendor: "jenkins", product: "jenkins" },
+  kubernetes: { vendor: "kubernetes", product: "kubernetes" },
+  nginx: { vendor: "f5", product: "nginx" },
+  docker: { vendor: "docker", product: "docker" },
+  terraform: { vendor: "hashicorp", product: "terraform" },
+  sonarqube: { vendor: "sonarsource", product: "sonarqube" },
+  apache: { vendor: "apache", product: "http_server" },
+  nodejs: { vendor: "nodejs", product: "node.js" },
+  python: { vendor: "python", product: "python" },
+  openssl: { vendor: "openssl", product: "openssl" },
+  postgresql: { vendor: "postgresql", product: "postgresql" },
+  mysql: { vendor: "oracle", product: "mysql" },
+  redis: { vendor: "redis", product: "redis" },
+  elasticsearch: { vendor: "elastic", product: "elasticsearch" },
+  mongodb: { vendor: "mongodb", product: "mongodb" },
+  grafana: { vendor: "grafana", product: "grafana" },
+  prometheus: { vendor: "prometheus", product: "prometheus" },
+  tomcat: { vendor: "apache", product: "tomcat" },
+  rabbitmq: { vendor: "vmware", product: "rabbitmq" },
+  vault: { vendor: "hashicorp", product: "vault" },
+  consul: { vendor: "hashicorp", product: "consul" },
+  ansible: { vendor: "redhat", product: "ansible" },
+  php: { vendor: "php", product: "php" },
+  ruby: { vendor: "ruby-lang", product: "ruby" },
+  go: { vendor: "golang", product: "go" },
+  java: { vendor: "oracle", product: "jdk" },
+  dotnet: { vendor: "microsoft", product: ".net" },
+};
+
 interface NvdCve {
   id: string;
   severity: "critical" | "high" | "medium" | "low";
@@ -23,7 +59,6 @@ function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low
 }
 
 function extractSeverity(cve: any): "critical" | "high" | "medium" | "low" {
-  // Try CVSS v3.1 first, then v3.0, then v2
   const metrics = cve.metrics || {};
   
   const v31 = metrics.cvssMetricV31?.[0]?.cvssData?.baseScore;
@@ -53,23 +88,32 @@ serve(async (req) => {
       );
     }
 
-    // Build keyword search — combine tool name with version for better results
-    const keywordSearch = `${toolName} ${version}`;
-    const url = `${NVD_API_BASE}?keywordSearch=${encodeURIComponent(keywordSearch)}&resultsPerPage=20`;
-
-    console.log(`Fetching NVD API: ${url}`);
+    const toolKey = toolName.toLowerCase().trim();
+    const cpeEntry = CPE_MAP[toolKey];
+    
+    let url: string;
+    
+    if (cpeEntry) {
+      // Use CPE-based search for accurate version-specific results
+      // Try exact version first with virtualMatchString
+      const cpeName = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${version}:*:*:*:*:*:*:*`;
+      url = `${NVD_API_BASE}?cpeName=${encodeURIComponent(cpeName)}&resultsPerPage=50`;
+      console.log(`Fetching NVD API (CPE): ${url}`);
+    } else {
+      // Fallback to keyword search for unmapped tools
+      const keywordSearch = `${toolName} ${version}`;
+      url = `${NVD_API_BASE}?keywordSearch=${encodeURIComponent(keywordSearch)}&resultsPerPage=20`;
+      console.log(`Fetching NVD API (keyword): ${url}`);
+    }
 
     const response = await fetch(url, {
-      headers: {
-        "Accept": "application/json",
-      },
+      headers: { "Accept": "application/json" },
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`NVD API error [${response.status}]: ${errorText}`);
       
-      // NVD rate limits — return empty instead of erroring
       if (response.status === 403 || response.status === 429) {
         return new Response(
           JSON.stringify({ cves: [], rateLimited: true }),
@@ -98,7 +142,6 @@ serve(async (req) => {
       };
     });
 
-    // Sort by severity
     const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     cves.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
