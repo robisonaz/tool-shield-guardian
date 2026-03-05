@@ -6,7 +6,12 @@ export interface ToolEntry {
   version: string;
   addedAt: string;
   latestVersion: string | null;
+  latestPatchForCycle: string | null;
   isOutdated: boolean | null;
+  isPatchOutdated: boolean | null;
+  eol: string | boolean | null;
+  lts: string | boolean | null;
+  cycleLabel: string | null;
   cves: CVEEntry[];
   loading?: boolean;
 }
@@ -39,21 +44,33 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-async function fetchLatestVersion(toolName: string): Promise<{ latestVersion: string | null }> {
+async function fetchLatestVersion(toolName: string, version: string): Promise<{
+  latestVersion: string | null;
+  latestPatchForCycle: string | null;
+  eol: string | boolean | null;
+  lts: string | boolean | null;
+  cycleLabel: string | null;
+}> {
   try {
     const { data, error } = await supabase.functions.invoke("version-check", {
-      body: { toolName },
+      body: { toolName, version },
     });
 
     if (error) {
       console.error("Error calling version-check:", error);
-      return { latestVersion: null };
+      return { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
     }
 
-    return { latestVersion: data?.latestVersion || null };
+    return {
+      latestVersion: data?.latestVersion || null,
+      latestPatchForCycle: data?.latestPatchForCycle || null,
+      eol: data?.eol ?? null,
+      lts: data?.lts ?? null,
+      cycleLabel: data?.cycleLabel || null,
+    };
   } catch (err) {
     console.error("Failed to fetch latest version:", err);
-    return { latestVersion: null };
+    return { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
   }
 }
 
@@ -100,7 +117,12 @@ export async function addTool(name: string, version: string): Promise<ToolEntry>
     version: version.trim(),
     addedAt: new Date().toISOString(),
     latestVersion: null,
+    latestPatchForCycle: null,
     isOutdated: null,
+    isPatchOutdated: null,
+    eol: null,
+    lts: null,
+    cycleLabel: null,
     cves: [],
     loading: true,
   };
@@ -111,13 +133,20 @@ export async function addTool(name: string, version: string): Promise<ToolEntry>
 
   // Fetch latest version AND CVEs in parallel
   const [versionResult, cves] = await Promise.all([
-    fetchLatestVersion(name),
+    fetchLatestVersion(name, version),
     fetchCVEsFromNVD(name, version),
   ]);
 
   entry.latestVersion = versionResult.latestVersion;
+  entry.latestPatchForCycle = versionResult.latestPatchForCycle;
+  entry.eol = versionResult.eol;
+  entry.lts = versionResult.lts;
+  entry.cycleLabel = versionResult.cycleLabel;
   entry.isOutdated = versionResult.latestVersion
     ? compareVersions(version, versionResult.latestVersion) < 0
+    : null;
+  entry.isPatchOutdated = versionResult.latestPatchForCycle
+    ? compareVersions(version, versionResult.latestPatchForCycle) < 0
     : null;
   entry.cves = cves;
   entry.loading = false;

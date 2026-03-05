@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -9,6 +9,35 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ToolTableProps {
   tools: ToolEntry[];
   onRemove: (id: string) => void;
+}
+
+function EolBadge({ eol }: { eol: string | boolean | null }) {
+  if (eol === null || eol === undefined) return null;
+  const isEol = eol === true || (typeof eol === "string" && new Date(eol) < new Date());
+  if (isEol) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-destructive/15 text-destructive border border-destructive/20">
+        <Clock className="h-3 w-3" /> EOL
+      </span>
+    );
+  }
+  if (typeof eol === "string") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/20">
+        <Clock className="h-3 w-3" /> EOL: {eol}
+      </span>
+    );
+  }
+  return null;
+}
+
+function LtsBadge({ lts }: { lts: string | boolean | null }) {
+  if (!lts) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/20">
+      <Star className="h-3 w-3" /> LTS
+    </span>
+  );
 }
 
 function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) => void }) {
@@ -22,13 +51,19 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
         onClick={() => setExpanded(!expanded)}
       >
         <td className="px-4 py-3">
-          {tool.cves.length > 0 ? (
+          {(tool.cves.length > 0 || tool.latestPatchForCycle) ? (
             expanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
           ) : (
             <span className="w-4 inline-block" />
           )}
         </td>
-        <td className="px-4 py-3 font-medium">{tool.name}</td>
+        <td className="px-4 py-3 font-medium">
+          <div className="flex items-center gap-2">
+            {tool.name}
+            <LtsBadge lts={tool.lts} />
+            <EolBadge eol={tool.eol} />
+          </div>
+        </td>
         <td className="px-4 py-3 text-accent">{tool.version}</td>
         <td className="px-4 py-3 text-muted-foreground">{tool.latestVersion || "—"}</td>
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
@@ -57,7 +92,7 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
         </td>
       </tr>
       <AnimatePresence>
-        {expanded && tool.cves.length > 0 && (
+        {expanded && (tool.cves.length > 0 || tool.latestPatchForCycle) && (
           <tr>
             <td colSpan={7} className="p-0">
               <motion.div
@@ -67,32 +102,76 @@ function ToolRow({ tool, onRemove }: { tool: ToolEntry; onRemove: (id: string) =
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="px-6 py-4 bg-secondary/30 border-b border-border">
-                  <h4 className="text-xs font-sans font-semibold text-destructive mb-3 tracking-wider uppercase">
-                    Vulnerabilidades Conhecidas
-                  </h4>
-                  <div className="space-y-2">
-                    {tool.cves.map(cve => (
-                      <div key={cve.id} className="flex items-start gap-3 p-3 rounded bg-card border border-border">
-                        <SeverityBadge severity={cve.severity} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-mono text-accent hover:underline"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              {cve.id}
-                            </a>
-                            <span className="text-xs text-muted-foreground">{cve.publishedDate}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{cve.description}</p>
+                <div className="px-6 py-4 bg-secondary/30 border-b border-border space-y-4">
+                  {/* Version recommendation */}
+                  {tool.latestPatchForCycle && (
+                    <div className="rounded bg-card border border-border p-3">
+                      <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
+                        <ArrowUpCircle className="h-3.5 w-3.5" />
+                        Versão Recomendada
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycleLabel})</span>
+                          <span className={`font-mono font-semibold ${tool.isPatchOutdated ? "text-warning" : "text-success"}`}>
+                            {tool.latestPatchForCycle}
+                          </span>
+                          {tool.isPatchOutdated && (
+                            <span className="text-xs text-warning ml-2">⬆ atualização disponível</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Última Estável</span>
+                          <span className="font-mono font-semibold text-primary">{tool.latestVersion}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
+                          <span className="flex items-center gap-1.5">
+                            {tool.eol === true || (typeof tool.eol === "string" && new Date(tool.eol) < new Date()) ? (
+                              <span className="text-destructive text-xs font-medium">⚠ Fim de vida (EOL)</span>
+                            ) : tool.eol === false ? (
+                              <span className="text-success text-xs font-medium">✓ Suportado</span>
+                            ) : typeof tool.eol === "string" ? (
+                              <span className="text-warning text-xs font-medium">Suporte até {tool.eol}</span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* CVEs */}
+                  {tool.cves.length > 0 && (
+                    <>
+                      <h4 className="text-xs font-sans font-semibold text-destructive tracking-wider uppercase">
+                        Vulnerabilidades Conhecidas
+                      </h4>
+                      <div className="space-y-2">
+                        {tool.cves.map(cve => (
+                          <div key={cve.id} className="flex items-start gap-3 p-3 rounded bg-card border border-border">
+                            <SeverityBadge severity={cve.severity} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-mono text-accent hover:underline"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  {cve.id}
+                                </a>
+                                <span className="text-xs text-muted-foreground">{cve.publishedDate}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{cve.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </motion.div>
             </td>
@@ -130,7 +209,7 @@ export function ToolTable({ tools, onRemove }: ToolTableProps) {
             </tr>
           </thead>
           <tbody>
-            {tools.map((tool, i) => (
+            {tools.map((tool) => (
               <ToolRow key={tool.id} tool={tool} onRemove={onRemove} />
             ))}
           </tbody>
