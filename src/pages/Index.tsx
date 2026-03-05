@@ -90,9 +90,17 @@ const Index = () => {
             </h1>
             <p className="text-xs text-muted-foreground">Monitoramento de versões e vulnerabilidades</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
-            <span className="text-xs text-muted-foreground">Online</span>
+            <span className="text-xs text-muted-foreground">{user?.email}</span>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} title="Configurações">
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
