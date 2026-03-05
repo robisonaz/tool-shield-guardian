@@ -15,7 +15,6 @@ const Index = () => {
   const [rechecking, setRechecking] = useState(false);
   const navigate = useNavigate();
   const { isAdmin, signOut, user } = useAuth();
-  const [rechecking, setRechecking] = useState(false);
 
   useEffect(() => {
     setTools(getStoredTools());
