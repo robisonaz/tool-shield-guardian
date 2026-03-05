@@ -104,13 +104,24 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
         <td className="px-4 py-3 text-accent">
           {editing ? (
-            <Input
-              value={editVersion}
-              onChange={(e) => setEditVersion(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-              className="h-7 text-sm bg-secondary border-border w-24"
-            />
+            <div className="space-y-1">
+              <Input
+                value={editVersion}
+                onChange={(e) => setEditVersion(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-24"
+                placeholder="Versão"
+              />
+              <Input
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-40"
+                placeholder="URL (opcional)"
+              />
+            </div>
           ) : (
             tool.version
           )}
