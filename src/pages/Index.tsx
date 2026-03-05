@@ -13,6 +13,9 @@ import { motion } from "framer-motion";
 const Index = () => {
   const [tools, setTools] = useState<ToolEntry[]>([]);
   const [rechecking, setRechecking] = useState(false);
+  const navigate = useNavigate();
+  const { isAdmin, signOut, user } = useAuth();
+  const [rechecking, setRechecking] = useState(false);
 
   useEffect(() => {
     setTools(getStoredTools());
