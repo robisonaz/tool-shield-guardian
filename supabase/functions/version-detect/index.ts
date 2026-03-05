@@ -63,6 +63,76 @@ const VERSION_HEADERS = [
 // Proxy/generic headers — record but don't stop searching
 const PROXY_HEADERS = ["server", "x-powered-by"];
 
+/**
+ * Validates that a URL hostname does not resolve to a private/internal IP range.
+ * Prevents SSRF attacks targeting cloud metadata, internal services, etc.
+ */
+function isPrivateOrReservedIP(ip: string): boolean {
+  // IPv4 private/reserved ranges
+  const parts = ip.split(".").map(Number);
+  if (parts.length === 4 && parts.every((p) => p >= 0 && p <= 255)) {
+    // 127.0.0.0/8 (loopback)
+    if (parts[0] === 127) return true;
+    // 10.0.0.0/8
+    if (parts[0] === 10) return true;
+    // 172.16.0.0/12
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    // 192.168.0.0/16
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    // 169.254.0.0/16 (link-local / cloud metadata)
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    // 0.0.0.0
+    if (parts.every((p) => p === 0)) return true;
+  }
+
+  // IPv6 loopback and private
+  const normalized = ip.toLowerCase();
+  if (normalized === "::1" || normalized === "0:0:0:0:0:0:0:1") return true;
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
+  if (normalized.startsWith("fe80")) return true;
+
+  return false;
+}
+
+async function validateUrl(urlStr: string): Promise<string> {
+  const parsed = new URL(urlStr);
+
+  // Only allow http/https
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Only http and https protocols are allowed.");
+  }
+
+  const hostname = parsed.hostname;
+
+  // Block obvious localhost/metadata hostnames
+  const blockedHostnames = [
+    "localhost",
+    "metadata.google.internal",
+    "metadata.google.com",
+  ];
+  if (blockedHostnames.includes(hostname.toLowerCase())) {
+    throw new Error("Access to internal/metadata hosts is not allowed.");
+  }
+
+  // Resolve hostname and check IP
+  try {
+    const addrs = await Deno.resolveDns(hostname, "A");
+    for (const addr of addrs) {
+      if (isPrivateOrReservedIP(addr)) {
+        throw new Error("Access to private/internal IP addresses is not allowed.");
+      }
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("not allowed")) {
+      throw err;
+    }
+    // DNS resolution may fail for valid hosts in some environments; 
+    // allow the fetch to proceed but disable redirects as a safeguard
+  }
+
+  return urlStr;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -71,9 +141,17 @@ serve(async (req) => {
   try {
     const { url } = await req.json();
 
-    if (!url) {
+    if (!url || typeof url !== "string") {
       return new Response(
         JSON.stringify({ success: false, error: "URL is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate URL length to prevent abuse
+    if (url.length > 2048) {
+      return new Response(
+        JSON.stringify({ success: false, error: "URL is too long." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -81,6 +159,16 @@ serve(async (req) => {
     let targetUrl = url.trim();
     if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
       targetUrl = `https://${targetUrl}`;
+    }
+
+    // Validate against SSRF
+    try {
+      await validateUrl(targetUrl);
+    } catch (validationErr) {
+      return new Response(
+        JSON.stringify({ success: false, error: (validationErr as Error).message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log(`Detecting version from: ${targetUrl}`);
@@ -96,7 +184,7 @@ serve(async (req) => {
           "User-Agent": "Mozilla/5.0 (compatible; SecVersions/1.0)",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        redirect: "follow",
+        redirect: "manual", // Don't follow redirects to prevent SSRF via redirect
       });
     } catch (fetchErr) {
       clearTimeout(timeout);
@@ -142,10 +230,13 @@ serve(async (req) => {
     // Always parse HTML to find the actual application behind the proxy
     const html = await response.text();
 
+    // Limit HTML size to prevent memory abuse
+    const htmlToScan = html.length > 500_000 ? html.substring(0, 500_000) : html;
+
     if (!detectedTool || !detectedVersion) {
       for (const dp of DETECTION_PATTERNS) {
         for (const pattern of dp.patterns) {
-          const match = html.match(pattern);
+          const match = htmlToScan.match(pattern);
           if (match) {
             detectedTool = dp.tool;
             if (match[1]) detectedVersion = match[1];
@@ -158,7 +249,7 @@ serve(async (req) => {
       // If tool found but no version, try generic nearby version
       if (detectedTool && !detectedVersion) {
         const toolRegex = new RegExp(detectedTool + "[\\s\\S]{0,50}?(\\d+\\.\\d+(?:\\.\\d+)?)", "i");
-        const genericMatch = html.match(toolRegex);
+        const genericMatch = htmlToScan.match(toolRegex);
         if (genericMatch?.[1]) detectedVersion = genericMatch[1];
       }
     }
@@ -187,7 +278,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in version-detect:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Erro interno" }),
+      JSON.stringify({ success: false, error: "Erro interno" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
