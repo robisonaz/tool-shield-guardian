@@ -54,13 +54,14 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
   },
 ];
 
-// Headers that may reveal tool/version
+// Headers that may reveal tool/version (non-proxy tools only)
 const VERSION_HEADERS = [
   { header: "x-jenkins", tool: "Jenkins" },
-  { header: "server", tool: null }, // generic
-  { header: "x-powered-by", tool: null },
   { header: "x-gitlab-meta", tool: "GitLab" },
 ];
+
+// Proxy/generic headers — record but don't stop searching
+const PROXY_HEADERS = ["server", "x-powered-by"];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -107,58 +108,65 @@ serve(async (req) => {
     }
     clearTimeout(timeout);
 
-    // Check headers first
     let detectedTool: string | null = null;
     let detectedVersion: string | null = null;
+    let proxyTool: string | null = null;
+    let proxyVersion: string | null = null;
 
+    // Check definitive headers (Jenkins, GitLab) — these are the real app
     for (const vh of VERSION_HEADERS) {
       const headerVal = response.headers.get(vh.header);
       if (headerVal) {
         console.log(`Header ${vh.header}: ${headerVal}`);
-        if (vh.tool) {
-          detectedTool = vh.tool;
-        }
+        detectedTool = vh.tool;
+        const versionMatch = headerVal.match(/(\d+\.\d+(?:\.\d+)?)/);
+        if (versionMatch) detectedVersion = versionMatch[1];
+        break;
+      }
+    }
+
+    // Record proxy headers as fallback
+    for (const ph of PROXY_HEADERS) {
+      const headerVal = response.headers.get(ph);
+      if (headerVal) {
+        console.log(`Proxy header ${ph}: ${headerVal}`);
         const versionMatch = headerVal.match(/(\d+\.\d+(?:\.\d+)?)/);
         if (versionMatch) {
-          detectedVersion = versionMatch[1];
-          if (vh.tool) detectedTool = vh.tool;
-          if (!detectedTool) {
-            // Try to identify from header value
-            if (/jenkins/i.test(headerVal)) detectedTool = "Jenkins";
-            else if (/nginx/i.test(headerVal)) detectedTool = "Nginx";
-            else if (/apache/i.test(headerVal)) detectedTool = "Apache";
-          }
-          break;
+          proxyVersion = versionMatch[1];
+          if (/nginx/i.test(headerVal)) proxyTool = "Nginx";
+          else if (/apache/i.test(headerVal)) proxyTool = "Apache";
         }
       }
     }
 
-    // Parse HTML body for version info
-    if (!detectedVersion) {
-      const html = await response.text();
+    // Always parse HTML to find the actual application behind the proxy
+    const html = await response.text();
 
+    if (!detectedTool || !detectedVersion) {
       for (const dp of DETECTION_PATTERNS) {
         for (const pattern of dp.patterns) {
           const match = html.match(pattern);
           if (match) {
             detectedTool = dp.tool;
-            if (match[1]) {
-              detectedVersion = match[1];
-            }
+            if (match[1]) detectedVersion = match[1];
             break;
           }
         }
-        if (detectedVersion) break;
+        if (detectedTool && detectedVersion) break;
       }
 
-      // If we found the tool but not version, try generic version pattern near tool name
+      // If tool found but no version, try generic nearby version
       if (detectedTool && !detectedVersion) {
         const toolRegex = new RegExp(detectedTool + "[\\s\\S]{0,50}?(\\d+\\.\\d+(?:\\.\\d+)?)", "i");
         const genericMatch = html.match(toolRegex);
-        if (genericMatch?.[1]) {
-          detectedVersion = genericMatch[1];
-        }
+        if (genericMatch?.[1]) detectedVersion = genericMatch[1];
       }
+    }
+
+    // If nothing found in HTML, fall back to proxy info
+    if (!detectedTool && proxyTool) {
+      detectedTool = proxyTool;
+      detectedVersion = proxyVersion;
     }
 
     console.log(`Detected: tool=${detectedTool}, version=${detectedVersion}`);
