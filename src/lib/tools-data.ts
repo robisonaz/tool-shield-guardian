@@ -256,13 +256,14 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   return updated;
 }
 
-export async function updateTool(id: string, name: string, version: string): Promise<ToolEntry> {
+export async function updateTool(id: string, name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
   const tools = getStoredTools();
   const existing = tools.find(t => t.id === id);
   if (!existing) throw new Error("Tool not found");
 
   existing.name = name.trim();
   existing.version = version.trim();
+  existing.sourceUrl = sourceUrl?.trim() || null;
   existing.loading = true;
   saveTools(tools);
 
