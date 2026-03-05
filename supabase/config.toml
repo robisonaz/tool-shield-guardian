@@ -2,3 +2,6 @@ project_id = "cwfdxvdghkenuzohwuai"
 
 [functions.nvd-lookup]
 verify_jwt = false
+
+[functions.version-check]
+verify_jwt = false
