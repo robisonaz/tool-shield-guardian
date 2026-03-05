@@ -4,6 +4,7 @@ export interface ToolEntry {
   id: string;
   name: string;
   version: string;
+  sourceUrl: string | null;
   addedAt: string;
   latestVersion: string | null;
   latestPatchForCycle: string | null;
@@ -153,11 +154,12 @@ export function saveTools(tools: ToolEntry[]) {
   localStorage.setItem("sec-tools", JSON.stringify(tools));
 }
 
-export async function addTool(name: string, version: string): Promise<ToolEntry> {
+export async function addTool(name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
   const entry: ToolEntry = {
     id: crypto.randomUUID(),
     name: name.trim(),
     version: version.trim(),
+    sourceUrl: sourceUrl?.trim() || null,
     addedAt: new Date().toISOString(),
     latestVersion: null,
     latestPatchForCycle: null,
@@ -207,23 +209,43 @@ export function removeTool(id: string) {
 }
 
 export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
+  // If tool has a sourceUrl, re-detect version from it
+  let currentVersion = tool.version;
+  let currentName = tool.name;
+
+  if (tool.sourceUrl) {
+    try {
+      const { data, error } = await supabase.functions.invoke("version-detect", {
+        body: { url: tool.sourceUrl },
+      });
+      if (!error && data?.version) {
+        currentVersion = data.version;
+        if (data.tool) currentName = data.tool;
+      }
+    } catch (err) {
+      console.error("Failed to re-detect version from URL:", err);
+    }
+  }
+
   const [versionResult, cves] = await Promise.all([
-    fetchVersionInfo(tool.name, tool.version),
-    fetchCVEsFromNVD(tool.name, tool.version),
+    fetchVersionInfo(currentName, currentVersion),
+    fetchCVEsFromNVD(currentName, currentVersion),
   ]);
 
   const updated: ToolEntry = {
     ...tool,
+    name: currentName,
+    version: currentVersion,
     latestVersion: versionResult.latestVersion,
     latestPatchForCycle: versionResult.latestPatchForCycle,
     eol: versionResult.eol,
     lts: versionResult.lts,
     cycleLabel: versionResult.cycleLabel,
     isOutdated: versionResult.latestVersion
-      ? compareVersions(tool.version, versionResult.latestVersion) < 0
+      ? compareVersions(currentVersion, versionResult.latestVersion) < 0
       : null,
     isPatchOutdated: versionResult.latestPatchForCycle
-      ? compareVersions(tool.version, versionResult.latestPatchForCycle) < 0
+      ? compareVersions(currentVersion, versionResult.latestPatchForCycle) < 0
       : null,
     cves,
     loading: false,

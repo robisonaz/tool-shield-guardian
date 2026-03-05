@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 interface AddToolFormProps {
-  onAdd: (name: string, version: string) => void;
+  onAdd: (name: string, version: string, sourceUrl?: string) => void;
 }
 
 export function AddToolForm({ onAdd }: AddToolFormProps) {
@@ -20,7 +20,7 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !version.trim()) return;
-    onAdd(name.trim(), version.trim());
+    onAdd(name.trim(), version.trim(), url.trim() || undefined);
     setName("");
     setVersion("");
     setUrl("");

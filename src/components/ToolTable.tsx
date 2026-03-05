@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -87,6 +87,11 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
           ) : (
             <div className="flex items-center gap-2">
               {tool.name}
+              {tool.sourceUrl && (
+                <span title={`URL: ${tool.sourceUrl}`}>
+                  <Globe className="h-3 w-3 text-primary/60" />
+                </span>
+              )}
               <LtsBadge lts={tool.lts} />
               <EolBadge eol={tool.eol} />
             </div>
