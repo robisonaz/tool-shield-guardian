@@ -130,10 +130,37 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
         <td className="px-4 py-3">
           {tool.cves.length > 0 ? (
-            <span className="flex items-center gap-1.5 text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span className="text-sm font-medium">{tool.cves.length} CVE{tool.cves.length > 1 ? "s" : ""}</span>
-            </span>
+            <div className="flex items-center gap-1.5">
+              {(() => {
+                const maxSeverity = tool.cves.reduce((max, cve) => {
+                  const order = { critical: 4, high: 3, medium: 2, low: 1 };
+                  return order[cve.severity] > order[max] ? cve.severity : max;
+                }, "low" as "critical" | "high" | "medium" | "low");
+                const config = {
+                  critical: { color: "text-destructive", icon: AlertTriangle },
+                  high: { color: "text-destructive/80", icon: AlertTriangle },
+                  medium: { color: "text-warning", icon: AlertTriangle },
+                  low: { color: "text-muted-foreground", icon: Shield },
+                };
+                const { color, icon: Icon } = config[maxSeverity];
+                return <Icon className={`h-3.5 w-3.5 ${color}`} />;
+              })()}
+              <span className="text-sm font-medium text-destructive">{tool.cves.length} CVE{tool.cves.length > 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-0.5 ml-1">
+                {tool.cves.some(c => c.severity === "critical") && (
+                  <span className="h-2 w-2 rounded-full bg-destructive" title="Critical" />
+                )}
+                {tool.cves.some(c => c.severity === "high") && (
+                  <span className="h-2 w-2 rounded-full bg-destructive/60" title="High" />
+                )}
+                {tool.cves.some(c => c.severity === "medium") && (
+                  <span className="h-2 w-2 rounded-full bg-warning" title="Medium" />
+                )}
+                {tool.cves.some(c => c.severity === "low") && (
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground" title="Low" />
+                )}
+              </div>
+            </div>
           ) : (
             <span className="flex items-center gap-1.5 text-success">
               <Shield className="h-3.5 w-3.5" />
