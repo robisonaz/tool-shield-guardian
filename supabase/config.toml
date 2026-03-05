@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.oidc-callback]
 verify_jwt = false
-
-[functions.bootstrap-admin]
-verify_jwt = false
