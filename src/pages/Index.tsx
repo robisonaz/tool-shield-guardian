@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, RefreshCw, Settings, LogOut } from "lucide-react";
 import { AddToolForm } from "@/components/AddToolForm";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
 import { addTool, getStoredTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const Index = () => {
   const [tools, setTools] = useState<ToolEntry[]>([]);
   const [rechecking, setRechecking] = useState(false);
+  const navigate = useNavigate();
+  const { isAdmin, signOut, user } = useAuth();
 
   useEffect(() => {
     setTools(getStoredTools());
@@ -86,9 +90,17 @@ const Index = () => {
             </h1>
             <p className="text-xs text-muted-foreground">Monitoramento de versões e vulnerabilidades</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
-            <span className="text-xs text-muted-foreground">Online</span>
+            <span className="text-xs text-muted-foreground">{user?.email}</span>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} title="Configurações">
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>

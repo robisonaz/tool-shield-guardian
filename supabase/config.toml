@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.version-detect]
 verify_jwt = false
+
+[functions.oidc-callback]
+verify_jwt = false
