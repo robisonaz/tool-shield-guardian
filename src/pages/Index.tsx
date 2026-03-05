@@ -14,12 +14,15 @@ const Index = () => {
     setTools(getStoredTools());
   }, []);
 
-  const handleAdd = (name: string, version: string) => {
-    const entry = addTool(name, version);
+  const handleAdd = async (name: string, version: string) => {
+    // Show immediate feedback
+    toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
+    
+    const entry = await addTool(name, version);
     setTools(getStoredTools());
 
     if (entry.isOutdated === null) {
-      toast.warning(`"${name}" não encontrada na base de dados.`);
+      toast.warning(`"${name}" não encontrada na base de versões.`);
     } else if (entry.isOutdated) {
       toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latestVersion}`);
     } else {
@@ -28,6 +31,8 @@ const Index = () => {
 
     if (entry.cves.length > 0) {
       toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
+    } else {
+      toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
     }
   };
 
