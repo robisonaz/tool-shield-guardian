@@ -44,7 +44,7 @@ serve(async (req) => {
   }
 
   try {
-    const { toolName } = await req.json();
+    const { toolName, version } = await req.json();
 
     if (!toolName) {
       return new Response(
@@ -58,7 +58,7 @@ serve(async (req) => {
 
     if (!slug) {
       return new Response(
-        JSON.stringify({ latestVersion: null, cycles: [] }),
+        JSON.stringify({ latestVersion: null, latestPatchForCycle: null, eol: null, lts: null }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -74,18 +74,64 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error(`endoflife.date error [${response.status}]: ${errorText}`);
       return new Response(
-        JSON.stringify({ latestVersion: null, cycles: [] }),
+        JSON.stringify({ latestVersion: null, latestPatchForCycle: null, eol: null, lts: null }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const cycles = await response.json();
 
-    // The first cycle is the latest
+    // The first cycle has the absolute latest version
     const latestVersion = cycles?.[0]?.latest || cycles?.[0]?.cycle || null;
 
+    // Find the user's cycle to get the latest patch for their major/minor
+    let latestPatchForCycle: string | null = null;
+    let eol: string | boolean | null = null;
+    let lts: string | boolean | null = null;
+    let cycleLabel: string | null = null;
+
+    if (version) {
+      const userVersionParts = version.split(".");
+      
+      for (const cycle of cycles) {
+        const cycleParts = String(cycle.cycle).split(".");
+        // Match major, or major.minor
+        const matchMajor = cycleParts[0] === userVersionParts[0];
+        const matchMinor = cycleParts.length > 1 && userVersionParts.length > 1
+          ? cycleParts[1] === userVersionParts[1]
+          : true;
+
+        if (matchMajor && matchMinor) {
+          latestPatchForCycle = cycle.latest || null;
+          eol = cycle.eol ?? null;
+          lts = cycle.lts ?? null;
+          cycleLabel = String(cycle.cycle);
+          break;
+        }
+      }
+
+      // Fallback: match just major version
+      if (!latestPatchForCycle) {
+        for (const cycle of cycles) {
+          if (String(cycle.cycle).split(".")[0] === userVersionParts[0]) {
+            latestPatchForCycle = cycle.latest || null;
+            eol = cycle.eol ?? null;
+            lts = cycle.lts ?? null;
+            cycleLabel = String(cycle.cycle);
+            break;
+          }
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify({ latestVersion, cycles: cycles.slice(0, 5) }),
+      JSON.stringify({
+        latestVersion,
+        latestPatchForCycle,
+        eol,
+        lts,
+        cycleLabel,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
