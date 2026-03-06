@@ -1,0 +1,1 @@
+DROP POLICY "Anyone can read enabled providers" ON public.oidc_providers;
