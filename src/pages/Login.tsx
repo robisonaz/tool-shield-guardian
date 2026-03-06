@@ -98,6 +98,32 @@ const Login = () => {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+          {/* Toggle Entrar / Cadastrar */}
+          <div className="flex rounded-lg bg-secondary p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(false)}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                !isSignUp
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(true)}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                isSignUp
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Cadastrar
+            </button>
+          </div>
+
           <form onSubmit={handleLocalAuth} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
