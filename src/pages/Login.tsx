@@ -28,11 +28,13 @@ const Login = () => {
   }, []);
 
   async function loadOidcProviders() {
-    const { data } = await supabase
-      .from("oidc_providers")
-      .select("id, display_name, name, issuer_url, client_id, scopes")
-      .eq("enabled", true);
-    setOidcProviders(data || []);
+    try {
+      const { data, error } = await supabase.functions.invoke("public-providers");
+      if (error) throw error;
+      setOidcProviders(data || []);
+    } catch {
+      setOidcProviders([]);
+    }
   }
 
   const handleLocalAuth = async (e: React.FormEvent) => {
