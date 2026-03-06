@@ -11,14 +11,29 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const code = searchParams.get("code");
-    const state = searchParams.get("state"); // provider id
+    const state = searchParams.get("state");
 
     if (!code || !state) {
       setError("Parâmetros de autenticação inválidos.");
       return;
     }
 
-    handleCallback(code, state);
+    // Verify CSRF state nonce
+    const storedRaw = sessionStorage.getItem("oidc_state");
+    if (!storedRaw) {
+      setError("Estado de autenticação não encontrado. Tente novamente.");
+      return;
+    }
+    const stored = JSON.parse(storedRaw);
+    if (stored.nonce !== state) {
+      setError("Validação de estado falhou. Tente novamente.");
+      sessionStorage.removeItem("oidc_state");
+      return;
+    }
+    const providerId = stored.providerId;
+    sessionStorage.removeItem("oidc_state");
+
+    handleCallback(code, providerId);
   }, [searchParams]);
 
   async function handleCallback(code: string, providerId: string) {

@@ -68,12 +68,14 @@ const Login = () => {
 
   const handleOidcLogin = (provider: any) => {
     const redirectUri = `${window.location.origin}/auth/callback`;
+    const nonce = crypto.randomUUID();
+    sessionStorage.setItem("oidc_state", JSON.stringify({ nonce, providerId: provider.id }));
     const params = new URLSearchParams({
       client_id: provider.client_id,
       redirect_uri: redirectUri,
       response_type: "code",
       scope: provider.scopes || "openid profile email",
-      state: provider.id,
+      state: nonce,
     });
     window.location.href = `${provider.issuer_url}/protocol/openid-connect/auth?${params}`;
   };

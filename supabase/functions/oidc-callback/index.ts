@@ -88,9 +88,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user exists in Supabase
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find((u: any) => u.email === email);
+    // Check if user exists in Supabase (direct lookup instead of listing all users)
+    const { data: profileData } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    let existingUser: any = null;
+    if (profileData) {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(profileData.id);
+      existingUser = userData?.user || null;
+    }
 
     let userId: string;
 
