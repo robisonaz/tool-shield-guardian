@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, RefreshCw, Settings, LogOut } from "lucide-react";
-import { AddToolForm } from "@/components/AddToolForm";
+import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
@@ -61,7 +60,6 @@ const Index = () => {
     setRechecking(true);
     toast.info(`Verificando ${currentTools.length} ferramenta(s)...`);
 
-    // Process sequentially to avoid rate limiting
     for (let i = 0; i < currentTools.length; i++) {
       try {
         await recheckTool(currentTools[i]);
@@ -91,6 +89,14 @@ const Index = () => {
             <p className="text-xs text-muted-foreground">Monitoramento de versões e vulnerabilidades</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <Button
+              onClick={() => navigate("/add-tool")}
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/80 glow-primary"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Cadastrar Ferramenta
+            </Button>
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             {isAdmin && (
@@ -114,8 +120,6 @@ const Index = () => {
         >
           <DashboardStats tools={tools} />
         </motion.div>
-
-        <AddToolForm onAdd={handleAdd} />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
