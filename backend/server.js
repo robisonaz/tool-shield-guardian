@@ -22,5 +22,5 @@ app.get("/users", async (req, res) => {
 });
 
 app.listen(3010, () => {
-  console.log("API rodando na porta 3000");
+  console.log("API rodando na porta 3010");
 });
