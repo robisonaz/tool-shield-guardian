@@ -1,66 +1,63 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import { getMe, logout as apiLogout, isAuthenticated, getTokens } from "@/lib/api-client";
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
+  setAuthData: (user: User, isAdmin: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  session: null,
   loading: true,
   isAdmin: false,
   signOut: async () => {},
+  setAuthData: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    if (isAuthenticated()) {
+      getMe()
+        .then((data) => {
+          setUser(data.user);
+          setIsAdmin(data.isAdmin);
+        })
+        .catch(() => {
+          setUser(null);
+          setIsAdmin(false);
+        })
+        .finally(() => setLoading(false));
+    } else {
       setLoading(false);
-
-      if (session?.user) {
-        setTimeout(() => checkAdmin(session.user.id), 0);
-      } else {
-        setIsAdmin(false);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) checkAdmin(session.user.id);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
-  async function checkAdmin(userId: string) {
-    const { data } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
-    setIsAdmin(!!data);
-  }
-
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await apiLogout();
+    setUser(null);
+    setIsAdmin(false);
+  };
+
+  const setAuthData = (user: User, isAdmin: boolean) => {
+    setUser(user);
+    setIsAdmin(isAdmin);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, signOut, setAuthData }}>
       {children}
     </AuthContext.Provider>
   );
