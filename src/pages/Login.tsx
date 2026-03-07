@@ -4,7 +4,7 @@ import { ShieldCheck, LogIn, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { login, getPublicProviders } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -15,33 +15,23 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [oidcProviders, setOidcProviders] = useState<any[]>([]);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setAuthData } = useAuth();
 
   useEffect(() => {
     if (user) navigate("/");
   }, [user, navigate]);
 
   useEffect(() => {
-    loadOidcProviders();
+    getPublicProviders().then(setOidcProviders).catch(() => setOidcProviders([]));
   }, []);
-
-  async function loadOidcProviders() {
-    try {
-      const { data, error } = await supabase.functions.invoke("public-providers");
-      if (error) throw error;
-      setOidcProviders(data || []);
-    } catch {
-      setOidcProviders([]);
-    }
-  }
 
   const handleLocalAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const data = await login(email, password);
+      setAuthData(data.user, data.isAdmin);
       toast.success("Login realizado com sucesso!");
       navigate("/");
     } catch (err: any) {

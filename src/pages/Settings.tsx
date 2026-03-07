@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, KeyRound, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
+import { getProviders, saveProvider, deleteProvider } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -32,7 +32,7 @@ const emptyProvider: OidcProvider = {
 };
 
 const Settings = () => {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [providers, setProviders] = useState<OidcProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,16 +48,13 @@ const Settings = () => {
   }, [isAdmin, navigate]);
 
   async function loadProviders() {
-    const { data, error } = await supabase
-      .from("oidc_providers")
-      .select("*")
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error(error);
+    try {
+      const data = await getProviders();
+      setProviders(data || []);
+    } catch (err) {
+      console.error(err);
       toast.error("Erro ao carregar provedores.");
     }
-    setProviders(data || []);
     setLoading(false);
   }
 
@@ -74,8 +71,9 @@ const Settings = () => {
   const removeProvider = async (index: number) => {
     const provider = providers[index];
     if (provider.id) {
-      const { error } = await supabase.from("oidc_providers").delete().eq("id", provider.id);
-      if (error) {
+      try {
+        await deleteProvider(provider.id);
+      } catch {
         toast.error("Erro ao remover provedor.");
         return;
       }
@@ -93,33 +91,8 @@ const Settings = () => {
           setSaving(false);
           return;
         }
-
-        const payload = {
-          name: provider.name,
-          display_name: provider.display_name,
-          issuer_url: provider.issuer_url,
-          client_id: provider.client_id,
-          client_secret: provider.client_secret,
-          scopes: provider.scopes,
-          enabled: provider.enabled,
-          updated_at: new Date().toISOString(),
-        };
-
-        if (provider.id) {
-          const { error } = await supabase
-            .from("oidc_providers")
-            .update(payload)
-            .eq("id", provider.id);
-          if (error) throw error;
-        } else {
-          const { data, error } = await supabase
-            .from("oidc_providers")
-            .insert(payload)
-            .select()
-            .single();
-          if (error) throw error;
-          provider.id = data.id;
-        }
+        const result = await saveProvider(provider);
+        if (!provider.id && result?.id) provider.id = result.id;
       }
       toast.success("Configurações salvas!");
       loadProviders();

@@ -3,7 +3,7 @@ import { Plus, Terminal, Globe, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AVAILABLE_TOOLS } from "@/lib/tools-data";
-import { supabase } from "@/integrations/supabase/client";
+import { versionDetect } from "@/lib/api-client";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -36,15 +36,7 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
     toast.info(`Detectando versão de ${url.trim()}...`);
 
     try {
-      const { data, error } = await supabase.functions.invoke("version-detect", {
-        body: { url: url.trim() },
-      });
-
-      if (error) {
-        toast.error("Erro ao detectar versão.");
-        console.error(error);
-        return;
-      }
+      const data = await versionDetect(url.trim());
 
       if (data?.tool) {
         setName(data.tool);
@@ -76,7 +68,6 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
         <h2 className="text-lg font-sans font-semibold text-foreground">Cadastrar Ferramenta</h2>
       </div>
 
-      {/* URL Detection Row */}
       <div className="flex flex-col sm:flex-row gap-3 mb-3">
         <div className="flex-1">
           <Input
@@ -102,7 +93,6 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
         </Button>
       </div>
 
-      {/* Manual Entry Row */}
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <Input
