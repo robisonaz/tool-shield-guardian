@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, LogIn, UserPlus, KeyRound } from "lucide-react";
+import { ShieldCheck, LogIn, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +10,8 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const Login = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [oidcProviders, setOidcProviders] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -42,23 +40,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-        if (error) throw error;
-        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Login realizado com sucesso!");
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Login realizado com sucesso!");
+      navigate("/");
     } catch (err: any) {
       toast.error(err.message || "Erro na autenticação");
     } finally {
@@ -93,50 +78,12 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-sans font-bold text-foreground">SecVersions</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isSignUp ? "Criar nova conta" : "Entrar na plataforma"}
+            Entrar na plataforma
           </p>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-          {/* Toggle Entrar / Cadastrar */}
-          <div className="flex rounded-lg bg-secondary p-1 gap-1">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(false)}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                !isSignUp
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsSignUp(true)}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                isSignUp
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Cadastrar
-            </button>
-          </div>
-
           <form onSubmit={handleLocalAuth} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome completo</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Seu nome"
-                  required={isSignUp}
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -161,13 +108,7 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                "Aguarde..."
-              ) : isSignUp ? (
-                <><UserPlus className="h-4 w-4 mr-2" /> Criar conta</>
-              ) : (
-                <><LogIn className="h-4 w-4 mr-2" /> Entrar</>
-              )}
+              {loading ? "Aguarde..." : <><LogIn className="h-4 w-4 mr-2" /> Entrar</>}
             </Button>
           </form>
 
