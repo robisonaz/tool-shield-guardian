@@ -45,6 +45,8 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  console.log(`[API] ${options.method || "GET"} ${url}`);
   const tokens = getTokens();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
