@@ -21,6 +21,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate redirectUri against allowlist to prevent OAuth redirect injection
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const allowedRedirectUris = [
+      `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/callback`,
+      ...(Deno.env.get("ALLOWED_REDIRECT_URIS") || "").split(",").map(u => u.trim()).filter(Boolean),
+    ];
+    
+    if (!allowedRedirectUris.includes(redirectUri)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid redirect URI" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
