@@ -64,7 +64,7 @@ async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promi
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      res = await fetch(url, { ...options, headers });
     }
   }
 
