@@ -39,13 +39,8 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin) {
-      toast.error("Acesso restrito a administradores.");
-      navigate("/");
-      return;
-    }
     loadProviders();
-  }, [isAdmin, navigate]);
+  }, []);
 
   async function loadProviders() {
     try {
