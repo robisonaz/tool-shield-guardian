@@ -70,9 +70,11 @@ async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promi
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Erro de rede" }));
+    console.error(`[API] Erro ${res.status}:`, body);
     throw new Error(body.error || `HTTP ${res.status}`);
   }
 
+  console.log(`[API] ${res.status} OK`);
   return res.json();
 }
 
