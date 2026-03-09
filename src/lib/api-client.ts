@@ -45,6 +45,8 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  console.log(`[API] ${options.method || "GET"} ${url}`);
   const tokens = getTokens();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -55,22 +57,24 @@ async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promi
     headers["Authorization"] = `Bearer ${tokens.accessToken}`;
   }
 
-  let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res = await fetch(url, { ...options, headers });
 
   // Try refresh on 401
   if (res.status === 401 && tokens?.refreshToken) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      res = await fetch(url, { ...options, headers });
     }
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Erro de rede" }));
+    console.error(`[API] Erro ${res.status}:`, body);
     throw new Error(body.error || `HTTP ${res.status}`);
   }
 
+  console.log(`[API] ${res.status} OK`);
   return res.json();
 }
 
