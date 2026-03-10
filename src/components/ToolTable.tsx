@@ -213,7 +213,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
       </tr>
       <AnimatePresence>
-        {expanded && (tool.cves.length > 0 || tool.latestPatchForCycle) && (
+        {expanded && (tool.cves.length > 0 || tool.latest_patch_for_cycle) && (
           <tr>
             <td colSpan={7} className="p-0">
               <motion.div
