@@ -154,25 +154,29 @@ export async function addTool(name: string, version: string, sourceUrl?: string)
   tools.unshift(entry);
   saveTools(tools);
 
-  const [versionResult, cves] = await Promise.all([
-    fetchVersionInfo(name, version),
-    fetchCVEsFromNVD(name, version),
-  ]);
+  try {
+    const [versionResult, cves] = await Promise.all([
+      fetchVersionInfo(name, version),
+      fetchCVEsFromNVD(name, version),
+    ]);
 
-  entry.latestVersion = versionResult.latestVersion;
-  entry.latestPatchForCycle = versionResult.latestPatchForCycle;
-  entry.eol = versionResult.eol;
-  entry.lts = versionResult.lts;
-  entry.cycleLabel = versionResult.cycleLabel;
-  entry.isOutdated = versionResult.latestVersion
-    ? compareVersions(version, versionResult.latestVersion) < 0
-    : null;
-  entry.isPatchOutdated = versionResult.latestPatchForCycle
-    ? compareVersions(version, versionResult.latestPatchForCycle) < 0
-    : null;
-  entry.cves = cves;
+    entry.latestVersion = versionResult.latestVersion;
+    entry.latestPatchForCycle = versionResult.latestPatchForCycle;
+    entry.eol = versionResult.eol;
+    entry.lts = versionResult.lts;
+    entry.cycleLabel = versionResult.cycleLabel;
+    entry.isOutdated = versionResult.latestVersion
+      ? compareVersions(version, versionResult.latestVersion) < 0
+      : null;
+    entry.isPatchOutdated = versionResult.latestPatchForCycle
+      ? compareVersions(version, versionResult.latestPatchForCycle) < 0
+      : null;
+    entry.cves = cves;
+  } catch (err) {
+    console.error("Erro ao buscar dados da ferramenta:", err);
+  }
+
   entry.loading = false;
-
   const updatedTools = getStoredTools().map(t => t.id === entry.id ? entry : t);
   saveTools(updatedTools);
 

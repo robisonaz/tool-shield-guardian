@@ -12,20 +12,25 @@ const AddTool = () => {
   const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
 
-    const entry = await addTool(name, version, sourceUrl);
+    try {
+      const entry = await addTool(name, version, sourceUrl);
 
-    if (entry.isOutdated === null) {
-      toast.warning(`"${name}" não encontrada na base de versões.`);
-    } else if (entry.isOutdated) {
-      toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latestVersion}`);
-    } else {
-      toast.success(`"${name} ${version}" está atualizada!`);
-    }
+      if (entry.isOutdated === null) {
+        toast.warning(`"${name}" não encontrada na base de versões.`);
+      } else if (entry.isOutdated) {
+        toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latestVersion}`);
+      } else {
+        toast.success(`"${name} ${version}" está atualizada!`);
+      }
 
-    if (entry.cves.length > 0) {
-      toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
-    } else {
-      toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
+      if (entry.cves.length > 0) {
+        toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
+      } else {
+        toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
+      }
+    } catch (err) {
+      console.error("Erro ao cadastrar ferramenta:", err);
+      toast.error("Erro ao buscar dados, mas a ferramenta foi salva.");
     }
 
     navigate("/");
