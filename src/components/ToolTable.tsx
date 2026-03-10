@@ -71,7 +71,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         onClick={() => !editing && setExpanded(!expanded)}
       >
         <td className="px-4 py-3">
-          {(tool.cves.length > 0 || tool.latestPatchForCycle) ? (
+          {(tool.cves.length > 0 || tool.latest_patch_for_cycle) ? (
             expanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
           ) : (
             <span className="w-4 inline-block" />
