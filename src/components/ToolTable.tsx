@@ -233,11 +233,11 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                         <div>
-                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycleLabel})</span>
-                          <span className={`font-mono font-semibold ${tool.isPatchOutdated ? "text-warning" : "text-success"}`}>
-                            {tool.latestPatchForCycle}
+                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycle_label})</span>
+                          <span className={`font-mono font-semibold ${tool.is_patch_outdated ? "text-warning" : "text-success"}`}>
+                            {tool.latest_patch_for_cycle}
                           </span>
-                          {tool.isPatchOutdated && (
+                          {tool.is_patch_outdated && (
                             <span className="text-xs text-warning ml-2">⬆ atualização disponível</span>
                           )}
                         </div>
