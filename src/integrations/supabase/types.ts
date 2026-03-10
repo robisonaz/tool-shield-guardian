@@ -77,6 +77,60 @@ export type Database = {
         }
         Relationships: []
       }
+      tools: {
+        Row: {
+          created_at: string
+          cves: Json
+          cycle_label: string | null
+          eol: string | null
+          id: string
+          is_outdated: boolean | null
+          is_patch_outdated: boolean | null
+          latest_patch_for_cycle: string | null
+          latest_version: string | null
+          lts: string | null
+          name: string
+          source_url: string | null
+          updated_at: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          cves?: Json
+          cycle_label?: string | null
+          eol?: string | null
+          id?: string
+          is_outdated?: boolean | null
+          is_patch_outdated?: boolean | null
+          latest_patch_for_cycle?: string | null
+          latest_version?: string | null
+          lts?: string | null
+          name: string
+          source_url?: string | null
+          updated_at?: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          cves?: Json
+          cycle_label?: string | null
+          eol?: string | null
+          id?: string
+          is_outdated?: boolean | null
+          is_patch_outdated?: boolean | null
+          latest_patch_for_cycle?: string | null
+          latest_version?: string | null
+          lts?: string | null
+          name?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
