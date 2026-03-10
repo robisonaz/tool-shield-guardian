@@ -171,4 +171,27 @@ export async function versionDetect(url: string) {
   });
 }
 
+// Tools CRUD
+export async function fetchTools() {
+  return apiFetch<any[]>("/tools");
+}
+
+export async function createTool(tool: Record<string, any>) {
+  return apiFetch<any>("/tools", {
+    method: "POST",
+    body: JSON.stringify(tool),
+  });
+}
+
+export async function updateToolApi(id: string, tool: Record<string, any>) {
+  return apiFetch<any>(`/tools/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(tool),
+  });
+}
+
+export async function deleteTool(id: string) {
+  return apiFetch(`/tools/${id}`, { method: "DELETE" });
+}
+
 export { getTokens, setTokens, clearTokens };

@@ -1,18 +1,19 @@
-import { nvdLookup } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool } from "@/lib/api-client";
 
 export interface ToolEntry {
   id: string;
+  user_id?: string;
   name: string;
   version: string;
-  sourceUrl: string | null;
-  addedAt: string;
-  latestVersion: string | null;
-  latestPatchForCycle: string | null;
-  isOutdated: boolean | null;
-  isPatchOutdated: boolean | null;
+  source_url: string | null;
+  added_at: string;
+  latest_version: string | null;
+  latest_patch_for_cycle: string | null;
+  is_outdated: boolean | null;
+  is_patch_outdated: boolean | null;
   eol: string | boolean | null;
   lts: string | boolean | null;
-  cycleLabel: string | null;
+  cycle_label: string | null;
   cves: CVEEntry[];
   loading?: boolean;
 }
@@ -58,7 +59,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
 };
 
 async function fetchVersionInfo(toolName: string, version: string) {
-  const empty = { latestVersion: null, latestPatchForCycle: null, eol: null, lts: null, cycleLabel: null };
+  const empty = { latest_version: null, latest_patch_for_cycle: null, eol: null, lts: null, cycle_label: null };
   const slug = PRODUCT_SLUGS[toolName.toLowerCase().trim()];
   if (!slug) return empty;
 
@@ -67,41 +68,41 @@ async function fetchVersionInfo(toolName: string, version: string) {
     if (!res.ok) return empty;
     const cycles = await res.json();
 
-    const latestVersion = cycles?.[0]?.latest || cycles?.[0]?.cycle || null;
+    const latest_version = cycles?.[0]?.latest || cycles?.[0]?.cycle || null;
     const vParts = version.split(".");
 
-    let latestPatchForCycle: string | null = null;
+    let latest_patch_for_cycle: string | null = null;
     let eol: any = null;
     let lts: any = null;
-    let cycleLabel: string | null = null;
+    let cycle_label: string | null = null;
 
     for (const c of cycles) {
       const cStr = String(c.cycle);
       const cParts = cStr.split(".");
       if (cParts[0] === vParts[0]) {
         if (cParts.length === 1 || vParts.length === 1 || cParts[1] === vParts[1]) {
-          latestPatchForCycle = c.latest || null;
+          latest_patch_for_cycle = c.latest || null;
           eol = c.eol ?? null;
           lts = c.lts ?? null;
-          cycleLabel = cStr;
+          cycle_label = cStr;
           break;
         }
       }
     }
 
-    if (!latestPatchForCycle) {
+    if (!latest_patch_for_cycle) {
       for (const c of cycles) {
         if (String(c.cycle).split(".")[0] === vParts[0]) {
-          latestPatchForCycle = c.latest || null;
+          latest_patch_for_cycle = c.latest || null;
           eol = c.eol ?? null;
           lts = c.lts ?? null;
-          cycleLabel = String(c.cycle);
+          cycle_label = String(c.cycle);
           break;
         }
       }
     }
 
-    return { latestVersion, latestPatchForCycle, eol, lts, cycleLabel };
+    return { latest_version, latest_patch_for_cycle, eol, lts, cycle_label };
   } catch (err) {
     console.error("Failed to fetch version info:", err);
     return empty;
@@ -119,83 +120,86 @@ export async function fetchCVEsFromNVD(toolName: string, version: string): Promi
   }
 }
 
-export function getStoredTools(): ToolEntry[] {
+// ─── Database-backed CRUD ───
+
+export async function getTools(): Promise<ToolEntry[]> {
   try {
-    const data = localStorage.getItem("sec-tools");
-    return data ? JSON.parse(data) : [];
-  } catch {
+    const rows = await fetchTools();
+    return rows.map(mapDbToEntry);
+  } catch (err) {
+    console.error("Failed to fetch tools:", err);
     return [];
   }
 }
 
-export function saveTools(tools: ToolEntry[]) {
-  localStorage.setItem("sec-tools", JSON.stringify(tools));
+function mapDbToEntry(row: any): ToolEntry {
+  return {
+    id: row.id,
+    name: row.name,
+    version: row.version,
+    source_url: row.source_url,
+    added_at: row.added_at || row.created_at,
+    latest_version: row.latest_version,
+    latest_patch_for_cycle: row.latest_patch_for_cycle,
+    is_outdated: row.is_outdated,
+    is_patch_outdated: row.is_patch_outdated,
+    eol: row.eol,
+    lts: row.lts,
+    cycle_label: row.cycle_label,
+    cves: typeof row.cves === "string" ? JSON.parse(row.cves) : (row.cves || []),
+  };
 }
 
 export async function addTool(name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
-  const entry: ToolEntry = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    version: version.trim(),
-    sourceUrl: sourceUrl?.trim() || null,
-    addedAt: new Date().toISOString(),
-    latestVersion: null,
-    latestPatchForCycle: null,
-    isOutdated: null,
-    isPatchOutdated: null,
-    eol: null,
-    lts: null,
-    cycleLabel: null,
-    cves: [],
-    loading: true,
-  };
-
-  const tools = getStoredTools();
-  tools.unshift(entry);
-  saveTools(tools);
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
 
   try {
-    const [versionResult, cves] = await Promise.all([
+    [versionResult, cves] = await Promise.all([
       fetchVersionInfo(name, version),
       fetchCVEsFromNVD(name, version),
     ]);
-
-    entry.latestVersion = versionResult.latestVersion;
-    entry.latestPatchForCycle = versionResult.latestPatchForCycle;
-    entry.eol = versionResult.eol;
-    entry.lts = versionResult.lts;
-    entry.cycleLabel = versionResult.cycleLabel;
-    entry.isOutdated = versionResult.latestVersion
-      ? compareVersions(version, versionResult.latestVersion) < 0
-      : null;
-    entry.isPatchOutdated = versionResult.latestPatchForCycle
-      ? compareVersions(version, versionResult.latestPatchForCycle) < 0
-      : null;
-    entry.cves = cves;
   } catch (err) {
     console.error("Erro ao buscar dados da ferramenta:", err);
   }
 
-  entry.loading = false;
-  const updatedTools = getStoredTools().map(t => t.id === entry.id ? entry : t);
-  saveTools(updatedTools);
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(version, versionResult.latest_version) < 0
+    : null;
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(version, versionResult.latest_patch_for_cycle) < 0
+    : null;
 
-  return entry;
+  const toolData = {
+    name: name.trim(),
+    version: version.trim(),
+    source_url: sourceUrl?.trim() || null,
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
+    cves,
+  };
+
+  const row = await createTool(toolData);
+  return mapDbToEntry(row);
 }
 
-export function removeTool(id: string) {
-  const tools = getStoredTools().filter(t => t.id !== id);
-  saveTools(tools);
+export async function removeTool(id: string) {
+  await deleteTool(id);
 }
 
 export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   let currentVersion = tool.version;
   let currentName = tool.name;
 
-  if (tool.sourceUrl) {
+  if (tool.source_url) {
     try {
       const { versionDetect } = await import("@/lib/api-client");
-      const data = await versionDetect(tool.sourceUrl);
+      const data = await versionDetect(tool.source_url);
       if (data?.version) {
         currentVersion = data.version;
         if (data.tool) currentName = data.tool;
@@ -205,68 +209,79 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
     }
   }
 
-  const [versionResult, cves] = await Promise.all([
-    fetchVersionInfo(currentName, currentVersion),
-    fetchCVEsFromNVD(currentName, currentVersion),
-  ]);
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
 
-  const updated: ToolEntry = {
-    ...tool,
+  try {
+    [versionResult, cves] = await Promise.all([
+      fetchVersionInfo(currentName, currentVersion),
+      fetchCVEsFromNVD(currentName, currentVersion),
+    ]);
+  } catch (err) {
+    console.error("Erro ao rechecar ferramenta:", err);
+  }
+
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(currentVersion, versionResult.latest_version) < 0
+    : null;
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(currentVersion, versionResult.latest_patch_for_cycle) < 0
+    : null;
+
+  const toolData = {
     name: currentName,
     version: currentVersion,
-    latestVersion: versionResult.latestVersion,
-    latestPatchForCycle: versionResult.latestPatchForCycle,
-    eol: versionResult.eol,
-    lts: versionResult.lts,
-    cycleLabel: versionResult.cycleLabel,
-    isOutdated: versionResult.latestVersion
-      ? compareVersions(currentVersion, versionResult.latestVersion) < 0
-      : null,
-    isPatchOutdated: versionResult.latestPatchForCycle
-      ? compareVersions(currentVersion, versionResult.latestPatchForCycle) < 0
-      : null,
+    source_url: tool.source_url,
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
     cves,
-    loading: false,
   };
 
-  const tools = getStoredTools().map(t => t.id === updated.id ? updated : t);
-  saveTools(tools);
-  return updated;
+  const row = await updateToolApi(tool.id, toolData);
+  return mapDbToEntry(row);
 }
 
 export async function updateTool(id: string, name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
-  const tools = getStoredTools();
-  const existing = tools.find(t => t.id === id);
-  if (!existing) throw new Error("Tool not found");
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
 
-  existing.name = name.trim();
-  existing.version = version.trim();
-  existing.sourceUrl = sourceUrl?.trim() || null;
-  existing.loading = true;
-  saveTools(tools);
+  try {
+    [versionResult, cves] = await Promise.all([
+      fetchVersionInfo(name, version),
+      fetchCVEsFromNVD(name, version),
+    ]);
+  } catch (err) {
+    console.error("Erro ao atualizar ferramenta:", err);
+  }
 
-  const [versionResult, cves] = await Promise.all([
-    fetchVersionInfo(name, version),
-    fetchCVEsFromNVD(name, version),
-  ]);
-
-  existing.latestVersion = versionResult.latestVersion;
-  existing.latestPatchForCycle = versionResult.latestPatchForCycle;
-  existing.eol = versionResult.eol;
-  existing.lts = versionResult.lts;
-  existing.cycleLabel = versionResult.cycleLabel;
-  existing.isOutdated = versionResult.latestVersion
-    ? compareVersions(version, versionResult.latestVersion) < 0
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(version, versionResult.latest_version) < 0
     : null;
-  existing.isPatchOutdated = versionResult.latestPatchForCycle
-    ? compareVersions(version, versionResult.latestPatchForCycle) < 0
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(version, versionResult.latest_patch_for_cycle) < 0
     : null;
-  existing.cves = cves;
-  existing.loading = false;
 
-  const updatedTools = getStoredTools().map(t => t.id === id ? existing : t);
-  saveTools(updatedTools);
-  return existing;
+  const toolData = {
+    name: name.trim(),
+    version: version.trim(),
+    source_url: sourceUrl?.trim() || null,
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
+    cves,
+  };
+
+  const row = await updateToolApi(id, toolData);
+  return mapDbToEntry(row);
 }
 
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>

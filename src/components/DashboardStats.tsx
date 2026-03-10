@@ -8,8 +8,8 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ tools }: DashboardStatsProps) {
   const total = tools.length;
-  const outdated = tools.filter(t => t.isOutdated === true).length;
-  const upToDate = tools.filter(t => t.isOutdated === false).length;
+  const outdated = tools.filter(t => t.is_outdated === true).length;
+  const upToDate = tools.filter(t => t.is_outdated === false).length;
   const totalCves = tools.reduce((acc, t) => acc + t.cves.length, 0);
   const criticalCves = tools.reduce((acc, t) => acc + t.cves.filter(c => c.severity === "critical").length, 0);
 

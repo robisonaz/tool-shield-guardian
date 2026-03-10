@@ -48,8 +48,8 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
-  const [editUrl, setEditUrl] = useState(tool.sourceUrl || "");
-  const status = tool.isOutdated === null ? "unknown" : tool.isOutdated ? "outdated" : "current";
+  const [editUrl, setEditUrl] = useState(tool.source_url || "");
+  const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
@@ -60,7 +60,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
   const handleCancelEdit = () => {
     setEditName(tool.name);
     setEditVersion(tool.version);
-    setEditUrl(tool.sourceUrl || "");
+    setEditUrl(tool.source_url || "");
     setEditing(false);
   };
 
@@ -71,7 +71,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         onClick={() => !editing && setExpanded(!expanded)}
       >
         <td className="px-4 py-3">
-          {(tool.cves.length > 0 || tool.latestPatchForCycle) ? (
+          {(tool.cves.length > 0 || tool.latest_patch_for_cycle) ? (
             expanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
           ) : (
             <span className="w-4 inline-block" />
@@ -89,8 +89,8 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
           ) : (
             <div className="flex items-center gap-2">
               {tool.name}
-              {tool.sourceUrl && (
-                <span title={`URL: ${tool.sourceUrl}`}>
+              {tool.source_url && (
+                <span title={`URL: ${tool.source_url}`}>
                   <Globe className="h-3 w-3 text-primary/60" />
                 </span>
               )}
@@ -126,7 +126,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
             tool.version
           )}
         </td>
-        <td className="px-4 py-3 text-muted-foreground">{tool.latestVersion || "—"}</td>
+        <td className="px-4 py-3 text-muted-foreground">{tool.latest_version || "—"}</td>
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
         <td className="px-4 py-3">
           {tool.cves.length > 0 ? (
@@ -213,7 +213,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
       </tr>
       <AnimatePresence>
-        {expanded && (tool.cves.length > 0 || tool.latestPatchForCycle) && (
+        {expanded && (tool.cves.length > 0 || tool.latest_patch_for_cycle) && (
           <tr>
             <td colSpan={7} className="p-0">
               <motion.div
@@ -225,7 +225,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
               >
                 <div className="px-6 py-4 bg-secondary/30 border-b border-border space-y-4">
                   {/* Version recommendation */}
-                  {tool.latestPatchForCycle && (
+                  {tool.latest_patch_for_cycle && (
                     <div className="rounded bg-card border border-border p-3">
                       <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
                         <ArrowUpCircle className="h-3.5 w-3.5" />
@@ -233,17 +233,17 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                         <div>
-                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycleLabel})</span>
-                          <span className={`font-mono font-semibold ${tool.isPatchOutdated ? "text-warning" : "text-success"}`}>
-                            {tool.latestPatchForCycle}
+                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycle_label})</span>
+                          <span className={`font-mono font-semibold ${tool.is_patch_outdated ? "text-warning" : "text-success"}`}>
+                            {tool.latest_patch_for_cycle}
                           </span>
-                          {tool.isPatchOutdated && (
+                          {tool.is_patch_outdated && (
                             <span className="text-xs text-warning ml-2">⬆ atualização disponível</span>
                           )}
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground block">Última Estável</span>
-                          <span className="font-mono font-semibold text-primary">{tool.latestVersion}</span>
+                          <span className="font-mono font-semibold text-primary">{tool.latest_version}</span>
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
