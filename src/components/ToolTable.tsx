@@ -48,8 +48,8 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
-  const [editUrl, setEditUrl] = useState(tool.sourceUrl || "");
-  const status = tool.isOutdated === null ? "unknown" : tool.isOutdated ? "outdated" : "current";
+  const [editUrl, setEditUrl] = useState(tool.source_url || "");
+  const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
