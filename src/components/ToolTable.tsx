@@ -126,7 +126,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
             tool.version
           )}
         </td>
-        <td className="px-4 py-3 text-muted-foreground">{tool.latestVersion || "—"}</td>
+        <td className="px-4 py-3 text-muted-foreground">{tool.latest_version || "—"}</td>
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
         <td className="px-4 py-3">
           {tool.cves.length > 0 ? (
