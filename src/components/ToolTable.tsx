@@ -225,7 +225,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
               >
                 <div className="px-6 py-4 bg-secondary/30 border-b border-border space-y-4">
                   {/* Version recommendation */}
-                  {tool.latestPatchForCycle && (
+                  {tool.latest_patch_for_cycle && (
                     <div className="rounded bg-card border border-border p-3">
                       <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
                         <ArrowUpCircle className="h-3.5 w-3.5" />
