@@ -60,7 +60,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
   const handleCancelEdit = () => {
     setEditName(tool.name);
     setEditVersion(tool.version);
-    setEditUrl(tool.sourceUrl || "");
+    setEditUrl(tool.source_url || "");
     setEditing(false);
   };
 
