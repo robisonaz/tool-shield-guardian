@@ -213,4 +213,77 @@ router.post("/version-detect", requireAuth, async (req, res) => {
   }
 });
 
+// ─── CRUD ───
+
+// List user's tools
+router.get("/", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { rows } = await pool.query(
+      "SELECT * FROM tools WHERE user_id = $1 ORDER BY added_at DESC",
+      [userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("List tools error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// Create tool
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves } = req.body;
+    if (!name || !version) return res.status(400).json({ error: "name and version required" });
+
+    const { rows } = await pool.query(
+      `INSERT INTO tools (user_id, name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [userId, name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || [])]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error("Create tool error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// Update tool
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE tools SET name=$1, version=$2, source_url=$3, latest_version=$4, latest_patch_for_cycle=$5, is_outdated=$6, is_patch_outdated=$7, eol=$8, lts=$9, cycle_label=$10, cves=$11
+       WHERE id=$12 AND user_id=$13 RETURNING *`,
+      [name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || []), id, userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Update tool error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// Delete tool
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const { rowCount } = await pool.query(
+      "DELETE FROM tools WHERE id = $1 AND user_id = $2",
+      [id, userId]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete tool error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
 export default router;
