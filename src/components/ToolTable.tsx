@@ -89,8 +89,8 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
           ) : (
             <div className="flex items-center gap-2">
               {tool.name}
-              {tool.sourceUrl && (
-                <span title={`URL: ${tool.sourceUrl}`}>
+              {tool.source_url && (
+                <span title={`URL: ${tool.source_url}`}>
                   <Globe className="h-3 w-3 text-primary/60" />
                 </span>
               )}
