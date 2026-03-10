@@ -4,7 +4,7 @@ import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
-import { addTool, getStoredTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -15,62 +15,80 @@ const Index = () => {
   const navigate = useNavigate();
   const { isAdmin, signOut, user } = useAuth();
 
+  const loadTools = async () => {
+    const data = await getTools();
+    setTools(data);
+  };
+
   useEffect(() => {
-    setTools(getStoredTools());
+    loadTools();
   }, []);
 
   const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
-    const entry = await addTool(name, version, sourceUrl);
-    setTools(getStoredTools());
+    try {
+      const entry = await addTool(name, version, sourceUrl);
+      await loadTools();
 
-    if (entry.isOutdated === null) {
-      toast.warning(`"${name}" não encontrada na base de versões.`);
-    } else if (entry.isOutdated) {
-      toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latestVersion}`);
-    } else {
-      toast.success(`"${name} ${version}" está atualizada!`);
-    }
+      if (entry.is_outdated === null) {
+        toast.warning(`"${name}" não encontrada na base de versões.`);
+      } else if (entry.is_outdated) {
+        toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latest_version}`);
+      } else {
+        toast.success(`"${name} ${version}" está atualizada!`);
+      }
 
-    if (entry.cves.length > 0) {
-      toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
-    } else {
-      toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
+      if (entry.cves.length > 0) {
+        toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
+      } else {
+        toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
+      }
+    } catch (err) {
+      console.error("Erro ao cadastrar:", err);
+      toast.error("Erro ao cadastrar ferramenta.");
     }
   };
 
-  const handleRemove = (id: string) => {
-    removeTool(id);
-    setTools(getStoredTools());
-    toast.info("Ferramenta removida.");
+  const handleRemove = async (id: string) => {
+    try {
+      await removeTool(id);
+      await loadTools();
+      toast.info("Ferramenta removida.");
+    } catch (err) {
+      console.error("Erro ao remover:", err);
+      toast.error("Erro ao remover ferramenta.");
+    }
   };
 
   const handleEdit = async (id: string, name: string, version: string, sourceUrl?: string) => {
     toast.info(`Atualizando "${name} ${version}"...`);
-    await updateTool(id, name, version, sourceUrl);
-    setTools(getStoredTools());
-    toast.success(`"${name} ${version}" atualizada com sucesso!`);
+    try {
+      await updateTool(id, name, version, sourceUrl);
+      await loadTools();
+      toast.success(`"${name} ${version}" atualizada com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao atualizar:", err);
+      toast.error("Erro ao atualizar ferramenta.");
+    }
   };
 
   const handleRecheckAll = async () => {
-    const currentTools = getStoredTools();
-    if (currentTools.length === 0) return;
+    if (tools.length === 0) return;
 
     setRechecking(true);
-    toast.info(`Verificando ${currentTools.length} ferramenta(s)...`);
+    toast.info(`Verificando ${tools.length} ferramenta(s)...`);
 
-    for (let i = 0; i < currentTools.length; i++) {
+    for (const tool of tools) {
       try {
-        await recheckTool(currentTools[i]);
-        setTools(getStoredTools());
+        await recheckTool(tool);
       } catch (err) {
-        console.error(`Failed to recheck ${currentTools[i].name}:`, err);
+        console.error(`Failed to recheck ${tool.name}:`, err);
       }
     }
 
     setRechecking(false);
-    setTools(getStoredTools());
+    await loadTools();
     toast.success("Checagem concluída!");
   };
 

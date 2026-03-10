@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { AddToolForm } from "@/components/AddToolForm";
 import { Button } from "@/components/ui/button";
-import { addTool, getStoredTools } from "@/lib/tools-data";
+import { addTool } from "@/lib/tools-data";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -15,10 +15,10 @@ const AddTool = () => {
     try {
       const entry = await addTool(name, version, sourceUrl);
 
-      if (entry.isOutdated === null) {
+      if (entry.is_outdated === null) {
         toast.warning(`"${name}" não encontrada na base de versões.`);
-      } else if (entry.isOutdated) {
-        toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latestVersion}`);
+      } else if (entry.is_outdated) {
+        toast.error(`"${name} ${version}" está desatualizada! Última: ${entry.latest_version}`);
       } else {
         toast.success(`"${name} ${version}" está atualizada!`);
       }
