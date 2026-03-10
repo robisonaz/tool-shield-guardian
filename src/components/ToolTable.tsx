@@ -243,7 +243,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground block">Última Estável</span>
-                          <span className="font-mono font-semibold text-primary">{tool.latestVersion}</span>
+                          <span className="font-mono font-semibold text-primary">{tool.latest_version}</span>
                         </div>
                         <div>
                           <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
