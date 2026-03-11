@@ -28,6 +28,7 @@ const Index = () => {
   }, []);
 
   const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
+    setAddDialogOpen(false);
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
     try {
