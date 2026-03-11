@@ -520,9 +520,23 @@ router.post("/version-detect", requireAuth, async (req, res) => {
       }
     }
 
-    // 6. Only use proxy info (nginx/apache) as absolute last resort — and label it as proxy
+    // 6. Only use proxy info (nginx/apache) as absolute last resort
+    // But if the page is a generic error page (403/502/etc), warn user instead of returning proxy
     if (!detectedTool) {
       const serverHeader = mainResult.headers.get("server") || "";
+      const isGenericErrorPage = /^<html>\s*<.*<center><h1>\d{3}\s/is.test(mainResult.body.trim())
+        || (mainResult.body.length < 2000 && /<h1>\s*\d{3}\s+(Forbidden|Not Found|Bad Gateway|Service Unavailable)/i.test(mainResult.body));
+
+      if (isGenericErrorPage) {
+        // It's just a proxy error page, not a real app
+        return res.json({
+          success: true,
+          tool: null,
+          version: null,
+          message: "Acesso bloqueado pelo servidor (403/502). A ferramenta pode não estar acessível externamente. Cadastre manualmente.",
+        });
+      }
+
       if (/nginx/i.test(serverHeader)) {
         const m = serverHeader.match(/(\d+\.\d+(?:\.\d+)?)/);
         detectedTool = "Nginx";
