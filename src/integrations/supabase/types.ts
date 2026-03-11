@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      branding_settings: {
+        Row: {
+          accent_color: string
+          app_name: string
+          app_subtitle: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          primary_color: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          app_name?: string
+          app_subtitle?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          app_name?: string
+          app_subtitle?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       oidc_providers: {
         Row: {
           client_id: string
