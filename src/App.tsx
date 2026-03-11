@@ -9,7 +9,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
-import AddTool from "./pages/AddTool";
+
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
