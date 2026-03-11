@@ -4,7 +4,7 @@ import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
-import { addTool, getTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
