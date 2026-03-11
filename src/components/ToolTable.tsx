@@ -200,7 +200,6 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
   const [editUrl, setEditUrl] = useState(tool.source_url || "");
-  const [addingSubVersion, setAddingSubVersion] = useState(false);
   const [newSubVersion, setNewSubVersion] = useState("");
   const [savingSubVersion, setSavingSubVersion] = useState(false);
   const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
@@ -225,7 +224,6 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
     setSavingSubVersion(true);
     await onAddSubVersion(tool.id, tool.name, newSubVersion.trim());
     setNewSubVersion("");
-    setAddingSubVersion(false);
     setSavingSubVersion(false);
   };
 
@@ -319,14 +317,9 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0" title="Editar">
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); setExpanded(true); }} className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0" title="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-                {onAddSubVersion && (
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setExpanded(true); setAddingSubVersion(true); }} className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 p-0" title="Adicionar sub-versão">
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                )}
                 <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRemove(tool.id); }} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0" title="Remover">
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -348,27 +341,24 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
               />
             ))}
 
-            {/* Add sub-version form */}
-            {addingSubVersion && (
+            {/* Add sub-version form — always visible when editing */}
+            {editing && onAddSubVersion && (
               <tr>
                 <td colSpan={7} className="p-0">
                   <div className="px-6 py-3 bg-primary/5 border-b border-border flex items-center gap-3">
                     <Layers className="h-4 w-4 text-primary ml-4" />
-                    <span className="text-xs text-muted-foreground">Nova sub-versão para <strong>{tool.name}</strong>:</span>
+                    <span className="text-xs text-muted-foreground">Adicionar sub-versão para <strong>{tool.name}</strong>:</span>
                     <Input
                       value={newSubVersion}
                       onChange={(e) => setNewSubVersion(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.key === "Enter" && handleAddSubVersion()}
                       placeholder="Ex: 7.33.0"
                       className="h-7 text-sm bg-secondary border-border w-32"
-                      autoFocus
                     />
-                    <Button size="sm" onClick={handleAddSubVersion} disabled={savingSubVersion || !newSubVersion.trim()} className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/80">
+                    <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddSubVersion(); }} disabled={savingSubVersion || !newSubVersion.trim()} className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/80">
                       {savingSubVersion ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
                       Adicionar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setAddingSubVersion(false); setNewSubVersion(""); }} className="h-7 text-xs">
-                      Cancelar
                     </Button>
                   </div>
                 </td>
