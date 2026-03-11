@@ -1,4 +1,18 @@
-import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion } from "@/lib/api-client";
+
+export interface SubVersionEntry {
+  id: string;
+  tool_id: string;
+  version: string;
+  latest_version: string | null;
+  latest_patch_for_cycle: string | null;
+  is_outdated: boolean | null;
+  is_patch_outdated: boolean | null;
+  eol: string | boolean | null;
+  lts: string | boolean | null;
+  cycle_label: string | null;
+  cves: CVEEntry[];
+}
 
 export interface ToolEntry {
   id: string;
@@ -16,6 +30,7 @@ export interface ToolEntry {
   cycle_label: string | null;
   cves: CVEEntry[];
   loading?: boolean;
+  sub_versions?: SubVersionEntry[];
 }
 
 export interface CVEEntry {
