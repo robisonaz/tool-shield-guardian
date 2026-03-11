@@ -77,6 +77,62 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_versions: {
+        Row: {
+          created_at: string
+          cves: Json
+          cycle_label: string | null
+          eol: string | null
+          id: string
+          is_outdated: boolean | null
+          is_patch_outdated: boolean | null
+          latest_patch_for_cycle: string | null
+          latest_version: string | null
+          lts: string | null
+          tool_id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          cves?: Json
+          cycle_label?: string | null
+          eol?: string | null
+          id?: string
+          is_outdated?: boolean | null
+          is_patch_outdated?: boolean | null
+          latest_patch_for_cycle?: string | null
+          latest_version?: string | null
+          lts?: string | null
+          tool_id: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          cves?: Json
+          cycle_label?: string | null
+          eol?: string | null
+          id?: string
+          is_outdated?: boolean | null
+          is_patch_outdated?: boolean | null
+          latest_patch_for_cycle?: string | null
+          latest_version?: string | null
+          lts?: string | null
+          tool_id?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_versions_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tools: {
         Row: {
           created_at: string
