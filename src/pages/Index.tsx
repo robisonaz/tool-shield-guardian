@@ -85,7 +85,8 @@ const Index = () => {
       }
     } catch (err) {
       console.error("Erro ao adicionar sub-versão:", err);
-      toast.error("Erro ao adicionar sub-versão.");
+      const message = err instanceof Error ? err.message : "Erro ao adicionar sub-versão.";
+      toast.error(message);
     }
   };
 

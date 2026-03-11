@@ -106,3 +106,25 @@ CREATE OR REPLACE TRIGGER oidc_providers_updated_at BEFORE UPDATE ON oidc_provid
 
 CREATE OR REPLACE TRIGGER tools_updated_at BEFORE UPDATE ON tools
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Sub-versions table (multiple installed versions per tool)
+CREATE TABLE IF NOT EXISTS tool_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tool_id UUID NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
+  version TEXT NOT NULL,
+  latest_version TEXT,
+  latest_patch_for_cycle TEXT,
+  is_outdated BOOLEAN,
+  is_patch_outdated BOOLEAN,
+  eol TEXT,
+  lts TEXT,
+  cycle_label TEXT,
+  cves JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_id ON tool_versions(tool_id);
+
+CREATE OR REPLACE TRIGGER tool_versions_updated_at BEFORE UPDATE ON tool_versions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
