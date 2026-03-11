@@ -366,6 +366,46 @@ export async function updateTool(id: string, name: string, version: string, sour
   return mapDbToEntry(row);
 }
 
+export async function addSubVersionToTool(toolId: string, toolName: string, version: string): Promise<SubVersionEntry> {
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
+
+  try {
+    [versionResult, cves] = await Promise.all([
+      fetchVersionInfo(toolName, version),
+      fetchCVEsFromNVD(toolName, version),
+    ]);
+  } catch (err) {
+    console.error("Erro ao buscar dados da sub-versão:", err);
+  }
+
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(version, versionResult.latest_version) < 0
+    : null;
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(version, versionResult.latest_patch_for_cycle) < 0
+    : null;
+
+  const data = {
+    version: version.trim(),
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
+    cves,
+  };
+
+  const row = await createSubVersion(toolId, data);
+  return mapDbToSubVersion(row);
+}
+
+export async function removeSubVersion(toolId: string, versionId: string) {
+  await deleteSubVersion(toolId, versionId);
+}
+
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>
   k.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 );
