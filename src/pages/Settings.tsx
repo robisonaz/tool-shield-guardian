@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, KeyRound, Palette } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, KeyRound, Settings as SettingsIcon } from "lucide-react";
 import { BrandingSettingsSection } from "@/components/BrandingSettings";
+import { ProfileSettings } from "@/components/ProfileSettings";
+import { UserManagement } from "@/components/UserManagement";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,8 +42,12 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadProviders();
-  }, []);
+    if (isAdmin) {
+      loadProviders();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
   async function loadProviders() {
     try {
@@ -49,7 +55,6 @@ const Settings = () => {
       setProviders(data || []);
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao carregar provedores.");
     }
     setLoading(false);
   }
@@ -116,129 +121,145 @@ const Settings = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-            <KeyRound className="h-5 w-5 text-primary text-glow" />
+            <SettingsIcon className="h-5 w-5 text-primary text-glow" />
           </div>
           <div>
             <h1 className="text-xl font-sans font-bold text-foreground">Configurações</h1>
-            <p className="text-xs text-muted-foreground">Provedores OIDC / Keycloak</p>
+            <p className="text-xs text-muted-foreground">Perfil, segurança e administração</p>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8 max-w-3xl">
-        {/* Branding Section */}
+        {/* Profile & Password — todos os usuários */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <BrandingSettingsSection />
+          <ProfileSettings />
         </motion.div>
 
-        {/* OIDC Section */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-sans font-semibold text-foreground">Provedores OIDC</h2>
-            <Button size="sm" onClick={addProvider}>
-              <Plus className="h-4 w-4 mr-1" /> Adicionar
-            </Button>
-          </div>
+        {/* Admin-only sections */}
+        {isAdmin && (
+          <>
+            {/* User Management */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+              <UserManagement />
+            </motion.div>
 
-          {providers.length === 0 ? (
-            <div className="bg-card border border-border rounded-lg p-8 text-center">
-              <KeyRound className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">
-                Nenhum provedor OIDC configurado.
-              </p>
-              <Button size="sm" className="mt-4" onClick={addProvider}>
-                <Plus className="h-4 w-4 mr-1" /> Adicionar provedor
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {providers.map((provider, index) => (
-                <div key={provider.id || index} className="bg-card border border-border rounded-lg p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-sans font-medium text-foreground">
-                      {provider.display_name || "Novo Provedor"}
-                    </h3>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`enabled-${index}`} className="text-xs text-muted-foreground">
-                          {provider.enabled ? "Ativo" : "Inativo"}
-                        </Label>
-                        <Switch
-                          id={`enabled-${index}`}
-                          checked={provider.enabled}
-                          onCheckedChange={(v) => updateProvider(index, "enabled", v)}
-                        />
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeProvider(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
+            {/* Branding */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              <BrandingSettingsSection />
+            </motion.div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nome de exibição</Label>
-                      <Input
-                        value={provider.display_name}
-                        onChange={(e) => updateProvider(index, "display_name", e.target.value)}
-                        placeholder="Keycloak Corporativo"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Identificador</Label>
-                      <Input
-                        value={provider.name}
-                        onChange={(e) => updateProvider(index, "name", e.target.value)}
-                        placeholder="keycloak"
-                      />
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label>Issuer URL</Label>
-                      <Input
-                        value={provider.issuer_url}
-                        onChange={(e) => updateProvider(index, "issuer_url", e.target.value)}
-                        placeholder="https://keycloak.example.com/realms/myrealm"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        URL base do realm no Keycloak (sem /protocol/openid-connect)
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client ID</Label>
-                      <Input
-                        value={provider.client_id}
-                        onChange={(e) => updateProvider(index, "client_id", e.target.value)}
-                        placeholder="secversions-client"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client Secret</Label>
-                      <Input
-                        type="password"
-                        value={provider.client_secret}
-                        onChange={(e) => updateProvider(index, "client_secret", e.target.value)}
-                        placeholder="••••••••"
-                      />
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label>Scopes</Label>
-                      <Input
-                        value={provider.scopes}
-                        onChange={(e) => updateProvider(index, "scopes", e.target.value)}
-                        placeholder="openid profile email"
-                      />
-                    </div>
-                  </div>
+            {/* OIDC Section */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-sans font-semibold text-foreground">Provedores OIDC</h2>
                 </div>
-              ))}
+                <Button size="sm" onClick={addProvider}>
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                </Button>
+              </div>
 
-              <Button onClick={saveProviders} disabled={saving} className="w-full">
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Salvando..." : "Salvar configurações"}
-              </Button>
-            </div>
-          )}
-        </motion.div>
+              {providers.length === 0 ? (
+                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                  <KeyRound className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">Nenhum provedor OIDC configurado.</p>
+                  <Button size="sm" className="mt-4" onClick={addProvider}>
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar provedor
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {providers.map((provider, index) => (
+                    <div key={provider.id || index} className="bg-card border border-border rounded-lg p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-sans font-medium text-foreground">
+                          {provider.display_name || "Novo Provedor"}
+                        </h3>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`enabled-${index}`} className="text-xs text-muted-foreground">
+                              {provider.enabled ? "Ativo" : "Inativo"}
+                            </Label>
+                            <Switch
+                              id={`enabled-${index}`}
+                              checked={provider.enabled}
+                              onCheckedChange={(v) => updateProvider(index, "enabled", v)}
+                            />
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => removeProvider(index)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Nome de exibição</Label>
+                          <Input
+                            value={provider.display_name}
+                            onChange={(e) => updateProvider(index, "display_name", e.target.value)}
+                            placeholder="Keycloak Corporativo"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Identificador</Label>
+                          <Input
+                            value={provider.name}
+                            onChange={(e) => updateProvider(index, "name", e.target.value)}
+                            placeholder="keycloak"
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <Label>Issuer URL</Label>
+                          <Input
+                            value={provider.issuer_url}
+                            onChange={(e) => updateProvider(index, "issuer_url", e.target.value)}
+                            placeholder="https://keycloak.example.com/realms/myrealm"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            URL base do realm no Keycloak (sem /protocol/openid-connect)
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Client ID</Label>
+                          <Input
+                            value={provider.client_id}
+                            onChange={(e) => updateProvider(index, "client_id", e.target.value)}
+                            placeholder="secversions-client"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Client Secret</Label>
+                          <Input
+                            type="password"
+                            value={provider.client_secret}
+                            onChange={(e) => updateProvider(index, "client_secret", e.target.value)}
+                            placeholder="••••••••"
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <Label>Scopes</Label>
+                          <Input
+                            value={provider.scopes}
+                            onChange={(e) => updateProvider(index, "scopes", e.target.value)}
+                            placeholder="openid profile email"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button onClick={saveProviders} disabled={saving} className="w-full">
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? "Salvando..." : "Salvar configurações"}
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
       </main>
     </div>
   );

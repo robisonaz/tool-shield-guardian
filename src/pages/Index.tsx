@@ -155,11 +155,9 @@ const Index = () => {
             </Button>
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
             <span className="text-xs text-muted-foreground">{user?.email}</span>
-            {isAdmin && (
-              <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} title="Configurações">
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} title="Configurações">
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
