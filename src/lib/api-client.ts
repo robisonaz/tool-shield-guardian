@@ -210,4 +210,42 @@ export async function deleteSubVersion(toolId: string, versionId: string) {
   return apiFetch(`/tools/${toolId}/versions/${versionId}`, { method: "DELETE" });
 }
 
+// Profile
+export async function updateProfile(data: { full_name?: string; email?: string }) {
+  return apiFetch<{ user: { id: string; email: string; full_name: string } }>("/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  return apiFetch("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+// Admin: User management
+export async function listUsers() {
+  return apiFetch<any[]>("/auth/users");
+}
+
+export async function createUser(data: { email: string; password: string; full_name: string; role?: string }) {
+  return apiFetch<any>("/auth/users", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUserRole(userId: string, role: string) {
+  return apiFetch(`/auth/users/${userId}/role`, {
+    method: "PUT",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function deleteUser(userId: string) {
+  return apiFetch(`/auth/users/${userId}`, { method: "DELETE" });
+}
+
 export { getTokens, setTokens, clearTokens };
