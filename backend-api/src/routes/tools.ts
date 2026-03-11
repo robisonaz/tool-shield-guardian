@@ -158,6 +158,12 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /Prometheus\s+v?(\d+\.\d+(?:\.\d+)?)/i,
     /<title>[^<]*Prometheus[^<]*<\/title>/i,
   ]},
+  { tool: "Foreman", patterns: [
+    /foreman-react-component/i,
+    /<title>[^<]*Foreman[^<]*<\/title>/i,
+    /\/users\/login.*foreman/i,
+    /class="pf-m-redhat-font"/i,
+  ]},
   { tool: "Rancher", patterns: [
     /<title>[^<]*Rancher[^<]*<\/title>/i,
     /rancher\.min\.js/i,
