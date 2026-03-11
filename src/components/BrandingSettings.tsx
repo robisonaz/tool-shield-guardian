@@ -3,7 +3,7 @@ import { Palette, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrandingClient } from "@/lib/branding-client";
 import { useBranding, type BrandingSettings as BrandingType } from "@/hooks/useBranding";
 import { toast } from "sonner";
 
@@ -32,18 +32,24 @@ export function BrandingSettingsSection() {
       return;
     }
 
+    const client = getBrandingClient();
+    if (!client) {
+      toast.error("Backend indisponível para upload de logo.");
+      return;
+    }
+
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
       const path = `logo.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await client.storage
         .from("branding")
         .upload(path, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = client.storage
         .from("branding")
         .getPublicUrl(path);
 
@@ -65,9 +71,15 @@ export function BrandingSettingsSection() {
   };
 
   const handleSave = async () => {
+    const client = getBrandingClient();
+    if (!client) {
+      toast.error("Backend indisponível para salvar branding.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await client
         .from("branding_settings")
         .update({
           app_name: form.app_name,
