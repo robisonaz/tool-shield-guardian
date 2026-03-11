@@ -194,6 +194,14 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /<title>[^<]*Portainer[^<]*<\/title>/i,
     /portainer\.js/i,
   ]},
+  { tool: "JumpServer", patterns: [
+    /<title>[^<]*JumpServer[^<]*<\/title>/i,
+    /<title>[^<]*Jump\s*Server[^<]*<\/title>/i,
+    /jumpserver/i,
+    /js-app/i,
+    /lina/i,
+    /luna/i,
+  ]},
 ];
 
 // Known API endpoints that may reveal version

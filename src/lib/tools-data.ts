@@ -57,6 +57,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
   keycloak: "keycloak",
+  jumpserver: "jumpserver",
 };
 
 async function fetchVersionInfo(toolName: string, version: string) {
