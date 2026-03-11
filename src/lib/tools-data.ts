@@ -30,7 +30,7 @@ const SUPPORTED_TOOLS = [
   "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
-  "zabbix server", "zabbix agent", "zabbix proxy", "keycloak",
+  "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver",
 ];
 
 function compareVersions(a: string, b: string): number {
