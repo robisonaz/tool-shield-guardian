@@ -185,65 +185,124 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
 ];
 
 // Known API endpoints that may reveal version
-const KNOWN_API_ENDPOINTS: { tool: string; paths: string[]; versionExtractor: (body: string, headers: Headers) => string | null }[] = [
+// Special fetch for APIs that need POST (e.g., Zabbix JSON-RPC)
+async function tryPostFetch(url: string, body: any, timeoutMs = 5000): Promise<{ body: string; headers: Headers } | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (compatible; SecVersions/1.0)" },
+      body: JSON.stringify(body),
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    const text = await resp.text();
+    return { body: text.substring(0, 500_000), headers: resp.headers };
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<string | null> }[] = [
   {
     tool: "Zabbix",
-    paths: ["/api_jsonrpc.php"],
-    versionExtractor: (body) => {
-      const m = body.match(/(\d+\.\d+(?:\.\d+)?)/);
-      return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      // Zabbix JSON-RPC: apiinfo.version doesn't require auth
+      const result = await tryPostFetch(`${baseUrl}/api_jsonrpc.php`, {
+        jsonrpc: "2.0",
+        method: "apiinfo.version",
+        params: [],
+        id: 1,
+      });
+      if (result) {
+        try {
+          const json = JSON.parse(result.body);
+          if (json.result) {
+            const m = json.result.match(/(\d+\.\d+(?:\.\d+)?)/);
+            return m ? m[1] : null;
+          }
+        } catch { /* not JSON */ }
+      }
+      return null;
     },
   },
   {
     tool: "Grafana",
-    paths: ["/api/health", "/api/frontend/settings"],
-    versionExtractor: (body) => {
-      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
-      return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      const result = await tryFetch(`${baseUrl}/api/health`);
+      if (result) {
+        const m = result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      const result2 = await tryFetch(`${baseUrl}/api/frontend/settings`);
+      if (result2) {
+        const m = result2.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      return null;
     },
   },
   {
     tool: "GitLab",
-    paths: ["/api/v4/version", "/-/health"],
-    versionExtractor: (body) => {
-      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
-      return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      const result = await tryFetch(`${baseUrl}/api/v4/version`);
+      if (result) {
+        const m = result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      return null;
     },
   },
   {
     tool: "Jenkins",
-    paths: ["/api/json"],
-    versionExtractor: (_body, headers) => {
-      const xj = headers.get("x-jenkins");
-      if (xj) {
-        const m = xj.match(/(\d+\.\d+(?:\.\d+)?)/);
-        return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      const result = await tryFetch(`${baseUrl}/api/json`);
+      if (result) {
+        const xj = result.headers.get("x-jenkins");
+        if (xj) {
+          const m = xj.match(/(\d+\.\d+(?:\.\d+)?)/);
+          if (m) return m[1];
+        }
       }
       return null;
     },
   },
   {
     tool: "SonarQube",
-    paths: ["/api/system/status", "/api/server/version"],
-    versionExtractor: (body) => {
-      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"|^(\d+\.\d+(?:\.\d+)?)/);
-      return m ? (m[1] || m[2]) : null;
+    probe: async (baseUrl) => {
+      for (const path of ["/api/system/status", "/api/server/version"]) {
+        const result = await tryFetch(`${baseUrl}${path}`);
+        if (result) {
+          const m = result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"|^(\d+\.\d+(?:\.\d+)?)/);
+          if (m) return m[1] || m[2];
+        }
+      }
+      return null;
     },
   },
   {
     tool: "Nexus",
-    paths: ["/service/rest/v1/status"],
-    versionExtractor: (body) => {
-      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
-      return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      const result = await tryFetch(`${baseUrl}/service/rest/v1/status`);
+      if (result) {
+        const m = result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      return null;
     },
   },
   {
     tool: "Portainer",
-    paths: ["/api/status"],
-    versionExtractor: (body) => {
-      const m = body.match(/"Version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
-      return m ? m[1] : null;
+    probe: async (baseUrl) => {
+      const result = await tryFetch(`${baseUrl}/api/status`);
+      if (result) {
+        const m = result.body.match(/"Version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      return null;
     },
   },
 ];
