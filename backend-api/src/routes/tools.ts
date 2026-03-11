@@ -39,6 +39,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   go: { vendor: "golang", product: "go" },
   java: { vendor: "oracle", product: "jdk" },
   dotnet: { vendor: "microsoft", product: ".net" },
+  keycloak: { vendor: "redhat", product: "keycloak" },
 };
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
