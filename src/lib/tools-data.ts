@@ -30,7 +30,7 @@ const SUPPORTED_TOOLS = [
   "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
-  "zabbix server", "zabbix agent", "zabbix proxy",
+  "zabbix server", "zabbix agent", "zabbix proxy", "keycloak",
 ];
 
 function compareVersions(a: string, b: string): number {
@@ -56,6 +56,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
   ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
+  keycloak: "keycloak",
 };
 
 async function fetchVersionInfo(toolName: string, version: string) {
