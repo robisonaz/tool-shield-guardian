@@ -222,7 +222,11 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
   const handleAddSubVersion = async () => {
     if (!newSubVersion.trim() || !onAddSubVersion) return;
     setSavingSubVersion(true);
-    await onAddSubVersion(tool.id, tool.name, newSubVersion.trim());
+    try {
+      await onAddSubVersion(tool.id, tool.name, newSubVersion.trim());
+    } catch (err) {
+      console.error("Erro ao adicionar sub-versão no ToolRow:", err);
+    }
     setNewSubVersion("");
     setSavingSubVersion(false);
   };
