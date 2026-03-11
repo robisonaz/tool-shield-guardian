@@ -198,9 +198,13 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /<title>[^<]*JumpServer[^<]*<\/title>/i,
     /<title>[^<]*Jump\s*Server[^<]*<\/title>/i,
     /jumpserver/i,
-    /js-app/i,
-    /lina/i,
-    /luna/i,
+    /\/api\/v1\/authentication/i,
+    /\/core\/auth\/login/i,
+    /\/luna\//i,
+    /\/lina\//i,
+    /\/koko\//i,
+    /static\/img\/login_image/i,
+    /fit2cloud/i,
   ]},
 ];
 
@@ -394,20 +398,33 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
   {
     tool: "JumpServer",
     probe: async (baseUrl) => {
-      // Try JumpServer API health/version endpoints
-      for (const path of ["/api/v1/health/", "/api/health/", "/api/v1/settings/public/"]) {
+      // Try JumpServer API endpoints
+      for (const path of [
+        "/api/v1/health/",
+        "/api/health/",
+        "/api/v1/settings/public/",
+        "/core/auth/login/",
+        "/api/v1/authentication/connection-token/",
+      ]) {
         const result = await tryFetch(`${baseUrl}${path}`);
         if (result) {
           const m = result.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
-            || result.body.match(/"CURRENT_VERSION"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+            || result.body.match(/"CURRENT_VERSION"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
+            || result.body.match(/"current_version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
           if (m) return m[1];
+          // If the endpoint responds, it's likely JumpServer even without version
+          // Check for JumpServer-specific headers
+          const xApp = result.headers.get("x-jumpserver-version") || result.headers.get("server") || "";
+          const mh = xApp.match(/JumpServer[\/\s]+v?(\d+\.\d+(?:\.\d+)?)/i);
+          if (mh) return mh[1];
         }
       }
       // Try main page for version in HTML/JS
       const mainResult = await tryFetch(`${baseUrl}/`);
       if (mainResult) {
         const m = mainResult.body.match(/JumpServer\s+v?(\d+\.\d+(?:\.\d+)?)/i)
-          || mainResult.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+          || mainResult.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
+          || mainResult.body.match(/static\/js\/[^"]*?(\d+\.\d+\.\d+)/i);
         if (m) return m[1];
       }
       return null;
