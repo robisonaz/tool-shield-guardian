@@ -177,6 +177,12 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /<title>[^<]*Keycloak[^<]*<\/title>/i,
     /keycloak\.js/i,
     /\/auth\/realms\//i,
+    /\/realms\//i,
+    /kc-logo/i,
+    /keycloak-theme/i,
+    /login-actions\/authenticate/i,
+    /powered by keycloak/i,
+    /id="kc-/i,
   ]},
   { tool: "MinIO", patterns: [
     /<title>[^<]*MinIO[^<]*<\/title>/i,
