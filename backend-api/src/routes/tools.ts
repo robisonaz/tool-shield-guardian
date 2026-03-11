@@ -391,6 +391,28 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
       return null;
     },
   },
+  {
+    tool: "JumpServer",
+    probe: async (baseUrl) => {
+      // Try JumpServer API health/version endpoints
+      for (const path of ["/api/v1/health/", "/api/health/", "/api/v1/settings/public/"]) {
+        const result = await tryFetch(`${baseUrl}${path}`);
+        if (result) {
+          const m = result.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
+            || result.body.match(/"CURRENT_VERSION"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+          if (m) return m[1];
+        }
+      }
+      // Try main page for version in HTML/JS
+      const mainResult = await tryFetch(`${baseUrl}/`);
+      if (mainResult) {
+        const m = mainResult.body.match(/JumpServer\s+v?(\d+\.\d+(?:\.\d+)?)/i)
+          || mainResult.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+        if (m) return m[1];
+      }
+      return null;
+    },
+  },
 ];
 
 const VERSION_HEADERS = [
