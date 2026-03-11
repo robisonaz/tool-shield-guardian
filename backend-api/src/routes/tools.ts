@@ -42,6 +42,9 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   keycloak: { vendor: "redhat", product: "keycloak" },
   jumpserver: { vendor: "fit2cloud", product: "jumpserver" },
   foreman: { vendor: "theforeman", product: "foreman" },
+  puppet: { vendor: "puppet", product: "puppet" },
+  "puppet server": { vendor: "puppet", product: "puppet" },
+  "puppet agent": { vendor: "puppet", product: "puppet" },
 };
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {

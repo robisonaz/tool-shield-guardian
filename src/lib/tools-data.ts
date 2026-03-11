@@ -58,6 +58,9 @@ const PRODUCT_SLUGS: Record<string, string> = {
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
   keycloak: "keycloak",
+  "puppet server": "puppet",
+  "puppet agent": "puppet",
+  puppet: "puppet",
 };
 
 // GitHub repos for tools not on endoflife.date
