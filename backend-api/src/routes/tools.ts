@@ -198,9 +198,13 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /<title>[^<]*JumpServer[^<]*<\/title>/i,
     /<title>[^<]*Jump\s*Server[^<]*<\/title>/i,
     /jumpserver/i,
-    /js-app/i,
-    /lina/i,
-    /luna/i,
+    /\/api\/v1\/authentication/i,
+    /\/core\/auth\/login/i,
+    /\/luna\//i,
+    /\/lina\//i,
+    /\/koko\//i,
+    /static\/img\/login_image/i,
+    /fit2cloud/i,
   ]},
 ];
 
