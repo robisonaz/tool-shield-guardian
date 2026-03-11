@@ -32,18 +32,24 @@ export function BrandingSettingsSection() {
       return;
     }
 
+    const client = getBrandingClient();
+    if (!client) {
+      toast.error("Backend indisponível para upload de logo.");
+      return;
+    }
+
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
       const path = `logo.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await client.storage
         .from("branding")
         .upload(path, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = client.storage
         .from("branding")
         .getPublicUrl(path);
 
