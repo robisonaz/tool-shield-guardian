@@ -71,9 +71,15 @@ export function BrandingSettingsSection() {
   };
 
   const handleSave = async () => {
+    const client = getBrandingClient();
+    if (!client) {
+      toast.error("Backend indisponível para salvar branding.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await client
         .from("branding_settings")
         .update({
           app_name: form.app_name,

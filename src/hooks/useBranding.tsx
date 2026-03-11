@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrandingClient } from "@/lib/branding-client";
 
 export interface BrandingSettings {
   id: string;
@@ -49,8 +49,14 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const reload = async () => {
+    const client = getBrandingClient();
+    if (!client) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("branding_settings")
         .select("*")
         .limit(1)
@@ -89,3 +95,4 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 export function useBranding() {
   return useContext(BrandingContext);
 }
+
