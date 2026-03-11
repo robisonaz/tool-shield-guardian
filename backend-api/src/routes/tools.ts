@@ -378,47 +378,20 @@ router.post("/version-detect", requireAuth, async (req, res) => {
     if (detectedTool && !detectedVersion) {
       const apiEntry = KNOWN_API_ENDPOINTS.find(e => e.tool === detectedTool);
       if (apiEntry) {
-        for (const path of apiEntry.paths) {
-          const apiResult = await tryFetch(`${baseUrl}${path}`);
-          if (apiResult) {
-            const ver = apiEntry.versionExtractor(apiResult.body, apiResult.headers);
-            if (ver) {
-              detectedVersion = ver;
-              break;
-            }
-          }
-        }
+        const ver = await apiEntry.probe(baseUrl);
+        if (ver) detectedVersion = ver;
       }
     }
 
     // 5. If no tool detected at all, try ALL known API endpoints
     if (!detectedTool) {
       for (const apiEntry of KNOWN_API_ENDPOINTS) {
-        for (const path of apiEntry.paths) {
-          const apiResult = await tryFetch(`${baseUrl}${path}`);
-          if (apiResult) {
-            const ver = apiEntry.versionExtractor(apiResult.body, apiResult.headers);
-            if (ver) {
-              detectedTool = apiEntry.tool;
-              detectedVersion = ver;
-              break;
-            }
-            // Check if the response body hints at the tool even without version
-            for (const dp of DETECTION_PATTERNS) {
-              if (dp.tool === apiEntry.tool) {
-                for (const pattern of dp.patterns) {
-                  if (apiResult.body.match(pattern)) {
-                    detectedTool = apiEntry.tool;
-                    break;
-                  }
-                }
-              }
-              if (detectedTool) break;
-            }
-          }
-          if (detectedTool) break;
+        const ver = await apiEntry.probe(baseUrl);
+        if (ver) {
+          detectedTool = apiEntry.tool;
+          detectedVersion = ver;
+          break;
         }
-        if (detectedTool) break;
       }
     }
 
