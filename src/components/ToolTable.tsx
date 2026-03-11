@@ -200,7 +200,6 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
   const [editUrl, setEditUrl] = useState(tool.source_url || "");
-  const [addingSubVersion, setAddingSubVersion] = useState(false);
   const [newSubVersion, setNewSubVersion] = useState("");
   const [savingSubVersion, setSavingSubVersion] = useState(false);
   const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
