@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import passport from "./config/passport.js";
+import { ensureToolVersionsSchema } from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import providersRoutes from "./routes/providers.js";
 import oidcRoutes from "./routes/oidc.js";
@@ -26,6 +27,16 @@ app.use("/api/tools", toolsRoutes);
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-app.listen(PORT, () => {
-  console.log(`SecVersions API running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await ensureToolVersionsSchema();
+    app.listen(PORT, () => {
+      console.log(`SecVersions API running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to initialize database schema:", err);
+    process.exit(1);
+  }
+}
+
+void startServer();
