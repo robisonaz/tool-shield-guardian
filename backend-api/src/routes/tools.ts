@@ -133,12 +133,12 @@ router.post("/version-detect", requireAuth, async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    let response: Response;
+    let response: globalThis.Response;
     try {
       response = await fetch(url, {
         signal: controller.signal,
         headers: { "User-Agent": "Mozilla/5.0 (compatible; SecVersions/1.0)", Accept: "text/html,*/*" },
-        redirect: "manual",
+        redirect: "follow",
       });
     } catch {
       clearTimeout(timeout);
