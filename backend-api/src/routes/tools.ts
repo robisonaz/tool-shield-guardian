@@ -111,12 +111,141 @@ router.post("/nvd-lookup", requireAuth, async (req, res) => {
 
 // Version detect from URL
 const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
-  { tool: "Zabbix", patterns: [/Zabbix\s+(?:SIA\s+)?(?:v?(\d+\.\d+(?:\.\d+)?))/i, /zabbix[_-]?version["\s:=]+["\s]*(\d+\.\d+(?:\.\d+)?)/i] },
-  { tool: "Grafana", patterns: [/Grafana\s+v?(\d+\.\d+(?:\.\d+)?)/i, /"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/i] },
-  { tool: "GitLab", patterns: [/gitlab[_-]?version["\s:=]+(\d+\.\d+(?:\.\d+)?)/i, /GitLab\s+(?:Community|Enterprise)?\s*Edition\s+(\d+\.\d+(?:\.\d+)?)/i] },
-  { tool: "Jenkins", patterns: [/Jenkins\s+ver\.\s*(\d+\.\d+(?:\.\d+)?)/i, /X-Jenkins:\s*(\d+\.\d+(?:\.\d+)?)/i] },
-  { tool: "SonarQube", patterns: [/SonarQube\s+(\d+\.\d+(?:\.\d+)?)/i] },
-  { tool: "Prometheus", patterns: [/Prometheus\s+v?(\d+\.\d+(?:\.\d+)?)/i] },
+  { tool: "Zabbix", patterns: [
+    /Zabbix\s+(?:SIA\s+)?(?:v?(\d+\.\d+(?:\.\d+)?))/i,
+    /zabbix[_-]?version["\s:=]+["\s]*(\d+\.\d+(?:\.\d+)?)/i,
+    /<title>[^<]*Zabbix[^<]*<\/title>/i,
+    /zabbix\.php/i,
+    /class="zabbix/i,
+    /name="zbx_sessionid"/i,
+  ]},
+  { tool: "Grafana", patterns: [
+    /Grafana\s+v?(\d+\.\d+(?:\.\d+)?)/i,
+    /"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/i,
+    /<title>[^<]*Grafana[^<]*<\/title>/i,
+    /grafana-app/i,
+    /window\.grafanaBootData/i,
+    /public\/build\/grafana/i,
+  ]},
+  { tool: "GitLab", patterns: [
+    /gitlab[_-]?version["\s:=]+(\d+\.\d+(?:\.\d+)?)/i,
+    /GitLab\s+(?:Community|Enterprise)?\s*Edition\s+(\d+\.\d+(?:\.\d+)?)/i,
+    /gon\.version\s*=\s*["'](\d+\.\d+(?:\.\d+)?)/i,
+    /<title>[^<]*GitLab[^<]*<\/title>/i,
+    /content="GitLab"/i,
+    /gitlab-org/i,
+  ]},
+  { tool: "Jenkins", patterns: [
+    /Jenkins\s+ver\.\s*(\d+\.\d+(?:\.\d+)?)/i,
+    /X-Jenkins:\s*(\d+\.\d+(?:\.\d+)?)/i,
+    /<title>[^<]*Jenkins[^<]*<\/title>/i,
+    /jenkins\.js/i,
+    /id="jenkins"/i,
+  ]},
+  { tool: "SonarQube", patterns: [
+    /SonarQube\s+(\d+\.\d+(?:\.\d+)?)/i,
+    /<title>[^<]*SonarQube[^<]*<\/title>/i,
+    /sonar\.version/i,
+    /\/static\/sonarqube/i,
+  ]},
+  { tool: "Prometheus", patterns: [
+    /Prometheus\s+v?(\d+\.\d+(?:\.\d+)?)/i,
+    /<title>[^<]*Prometheus[^<]*<\/title>/i,
+  ]},
+  { tool: "Rancher", patterns: [
+    /<title>[^<]*Rancher[^<]*<\/title>/i,
+    /rancher\.min\.js/i,
+  ]},
+  { tool: "AWX", patterns: [
+    /<title>[^<]*AWX[^<]*<\/title>/i,
+    /awx-app/i,
+  ]},
+  { tool: "Nexus", patterns: [
+    /<title>[^<]*Nexus[^<]*<\/title>/i,
+    /nexus-ui/i,
+    /Sonatype Nexus/i,
+  ]},
+  { tool: "Harbor", patterns: [
+    /<title>[^<]*Harbor[^<]*<\/title>/i,
+    /harbor-app/i,
+  ]},
+  { tool: "Keycloak", patterns: [
+    /<title>[^<]*Keycloak[^<]*<\/title>/i,
+    /keycloak\.js/i,
+    /\/auth\/realms\//i,
+  ]},
+  { tool: "MinIO", patterns: [
+    /<title>[^<]*MinIO[^<]*<\/title>/i,
+    /minio-app/i,
+  ]},
+  { tool: "Portainer", patterns: [
+    /<title>[^<]*Portainer[^<]*<\/title>/i,
+    /portainer\.js/i,
+  ]},
+];
+
+// Known API endpoints that may reveal version
+const KNOWN_API_ENDPOINTS: { tool: string; paths: string[]; versionExtractor: (body: string, headers: Headers) => string | null }[] = [
+  {
+    tool: "Zabbix",
+    paths: ["/api_jsonrpc.php"],
+    versionExtractor: (body) => {
+      const m = body.match(/(\d+\.\d+(?:\.\d+)?)/);
+      return m ? m[1] : null;
+    },
+  },
+  {
+    tool: "Grafana",
+    paths: ["/api/health", "/api/frontend/settings"],
+    versionExtractor: (body) => {
+      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+      return m ? m[1] : null;
+    },
+  },
+  {
+    tool: "GitLab",
+    paths: ["/api/v4/version", "/-/health"],
+    versionExtractor: (body) => {
+      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+      return m ? m[1] : null;
+    },
+  },
+  {
+    tool: "Jenkins",
+    paths: ["/api/json"],
+    versionExtractor: (_body, headers) => {
+      const xj = headers.get("x-jenkins");
+      if (xj) {
+        const m = xj.match(/(\d+\.\d+(?:\.\d+)?)/);
+        return m ? m[1] : null;
+      }
+      return null;
+    },
+  },
+  {
+    tool: "SonarQube",
+    paths: ["/api/system/status", "/api/server/version"],
+    versionExtractor: (body) => {
+      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"|^(\d+\.\d+(?:\.\d+)?)/);
+      return m ? (m[1] || m[2]) : null;
+    },
+  },
+  {
+    tool: "Nexus",
+    paths: ["/service/rest/v1/status"],
+    versionExtractor: (body) => {
+      const m = body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+      return m ? m[1] : null;
+    },
+  },
+  {
+    tool: "Portainer",
+    paths: ["/api/status"],
+    versionExtractor: (body) => {
+      const m = body.match(/"Version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+      return m ? m[1] : null;
+    },
+  },
 ];
 
 const VERSION_HEADERS = [
@@ -124,34 +253,45 @@ const VERSION_HEADERS = [
   { header: "x-gitlab-meta", tool: "GitLab" },
 ];
 
+async function tryFetch(url: string, timeoutMs = 5000): Promise<{ body: string; headers: Headers } | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; SecVersions/1.0)", Accept: "text/html,application/json,*/*" },
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    const body = await resp.text();
+    return { body: body.substring(0, 500_000), headers: resp.headers };
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
 router.post("/version-detect", requireAuth, async (req, res) => {
   try {
     let { url } = req.body;
     if (!url) return res.status(400).json({ success: false, error: "URL obrigatória" });
     if (!url.startsWith("http://") && !url.startsWith("https://")) url = `https://${url}`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    // Remove trailing slash for consistent path joining
+    const baseUrl = url.replace(/\/+$/, "");
 
-    let response: globalThis.Response;
-    try {
-      response = await fetch(url, {
-        signal: controller.signal,
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; SecVersions/1.0)", Accept: "text/html,*/*" },
-        redirect: "follow",
-      });
-    } catch {
-      clearTimeout(timeout);
+    // 1. Fetch main page
+    const mainResult = await tryFetch(baseUrl, 10000);
+    if (!mainResult) {
       return res.json({ success: false, error: "Não foi possível acessar a URL" });
     }
-    clearTimeout(timeout);
 
     let detectedTool: string | null = null;
     let detectedVersion: string | null = null;
 
-    // Check headers
+    // 2. Check definitive response headers
     for (const vh of VERSION_HEADERS) {
-      const val = response.headers.get(vh.header);
+      const val = mainResult.headers.get(vh.header);
       if (val) {
         detectedTool = vh.tool;
         const m = val.match(/(\d+\.\d+(?:\.\d+)?)/);
@@ -160,43 +300,84 @@ router.post("/version-detect", requireAuth, async (req, res) => {
       }
     }
 
-    // Check proxy headers as fallback
-    let proxyTool: string | null = null;
-    let proxyVersion: string | null = null;
-    for (const ph of ["server", "x-powered-by"]) {
-      const val = response.headers.get(ph);
-      if (val) {
-        const m = val.match(/(\d+\.\d+(?:\.\d+)?)/);
-        if (m) {
-          proxyVersion = m[1];
-          if (/nginx/i.test(val)) proxyTool = "Nginx";
-          else if (/apache/i.test(val)) proxyTool = "Apache";
-        }
-      }
-    }
-
-    // Parse HTML
-    const html = await response.text();
-    const htmlToScan = html.length > 500_000 ? html.substring(0, 500_000) : html;
-
+    // 3. Scan HTML for tool patterns
     if (!detectedTool || !detectedVersion) {
       for (const dp of DETECTION_PATTERNS) {
         for (const pattern of dp.patterns) {
-          const match = htmlToScan.match(pattern);
+          const match = mainResult.body.match(pattern);
           if (match) {
             detectedTool = dp.tool;
             if (match[1]) detectedVersion = match[1];
             break;
           }
         }
-        if (detectedTool && detectedVersion) break;
+        if (detectedTool) break;
       }
     }
 
-    if (!detectedTool && proxyTool) {
-      detectedTool = proxyTool;
-      detectedVersion = proxyVersion;
+    // 4. If tool detected but no version, try known API endpoints for that tool
+    if (detectedTool && !detectedVersion) {
+      const apiEntry = KNOWN_API_ENDPOINTS.find(e => e.tool === detectedTool);
+      if (apiEntry) {
+        for (const path of apiEntry.paths) {
+          const apiResult = await tryFetch(`${baseUrl}${path}`);
+          if (apiResult) {
+            const ver = apiEntry.versionExtractor(apiResult.body, apiResult.headers);
+            if (ver) {
+              detectedVersion = ver;
+              break;
+            }
+          }
+        }
+      }
     }
+
+    // 5. If no tool detected at all, try ALL known API endpoints
+    if (!detectedTool) {
+      for (const apiEntry of KNOWN_API_ENDPOINTS) {
+        for (const path of apiEntry.paths) {
+          const apiResult = await tryFetch(`${baseUrl}${path}`);
+          if (apiResult) {
+            const ver = apiEntry.versionExtractor(apiResult.body, apiResult.headers);
+            if (ver) {
+              detectedTool = apiEntry.tool;
+              detectedVersion = ver;
+              break;
+            }
+            // Check if the response body hints at the tool even without version
+            for (const dp of DETECTION_PATTERNS) {
+              if (dp.tool === apiEntry.tool) {
+                for (const pattern of dp.patterns) {
+                  if (apiResult.body.match(pattern)) {
+                    detectedTool = apiEntry.tool;
+                    break;
+                  }
+                }
+              }
+              if (detectedTool) break;
+            }
+          }
+          if (detectedTool) break;
+        }
+        if (detectedTool) break;
+      }
+    }
+
+    // 6. Only use proxy info (nginx/apache) as absolute last resort — and label it as proxy
+    if (!detectedTool) {
+      const serverHeader = mainResult.headers.get("server") || "";
+      if (/nginx/i.test(serverHeader)) {
+        const m = serverHeader.match(/(\d+\.\d+(?:\.\d+)?)/);
+        detectedTool = "Nginx";
+        detectedVersion = m ? m[1] : null;
+      } else if (/apache/i.test(serverHeader)) {
+        const m = serverHeader.match(/(\d+\.\d+(?:\.\d+)?)/);
+        detectedTool = "Apache";
+        detectedVersion = m ? m[1] : null;
+      }
+    }
+
+    console.log(`Version detect: tool=${detectedTool}, version=${detectedVersion}`);
 
     res.json({
       success: true,
