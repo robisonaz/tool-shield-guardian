@@ -197,6 +197,15 @@ const Index = () => {
           <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} />
         </motion.div>
       </main>
+
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-2xl border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Cadastrar Ferramenta</DialogTitle>
+          </DialogHeader>
+          <AddToolForm onAdd={handleAdd} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
