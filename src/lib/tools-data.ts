@@ -30,7 +30,7 @@ const SUPPORTED_TOOLS = [
   "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
-  "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver",
+  "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver", "foreman",
 ];
 
 function compareVersions(a: string, b: string): number {
@@ -62,6 +62,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
 // GitHub repos for tools not on endoflife.date
 const GITHUB_REPOS: Record<string, string> = {
   jumpserver: "jumpserver/jumpserver",
+  foreman: "theforeman/foreman",
 };
 
 async function fetchLatestFromGitHub(repo: string): Promise<string | null> {

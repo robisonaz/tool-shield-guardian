@@ -41,6 +41,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   dotnet: { vendor: "microsoft", product: ".net" },
   keycloak: { vendor: "redhat", product: "keycloak" },
   jumpserver: { vendor: "fit2cloud", product: "jumpserver" },
+  foreman: { vendor: "theforeman", product: "foreman" },
 };
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
@@ -157,6 +158,12 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
   { tool: "Prometheus", patterns: [
     /Prometheus\s+v?(\d+\.\d+(?:\.\d+)?)/i,
     /<title>[^<]*Prometheus[^<]*<\/title>/i,
+  ]},
+  { tool: "Foreman", patterns: [
+    /foreman-react-component/i,
+    /<title>[^<]*Foreman[^<]*<\/title>/i,
+    /\/users\/login.*foreman/i,
+    /class="pf-m-redhat-font"/i,
   ]},
   { tool: "Rancher", patterns: [
     /<title>[^<]*Rancher[^<]*<\/title>/i,
@@ -425,6 +432,27 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
         const m = mainResult.body.match(/JumpServer\s+v?(\d+\.\d+(?:\.\d+)?)/i)
           || mainResult.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
           || mainResult.body.match(/static\/js\/[^"]*?(\d+\.\d+\.\d+)/i);
+        if (m) return m[1];
+      }
+      return null;
+    },
+  },
+  {
+    tool: "Foreman",
+    probe: async (baseUrl) => {
+      // Foreman embeds version in data-props of the login page
+      const result = await tryFetch(`${baseUrl}/`);
+      if (result) {
+        // Look for version in foreman-react-component data-props
+        const m = result.body.match(/&quot;version&quot;:&quot;(\d+\.\d+(?:\.\d+)?)&quot;/i)
+          || result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/i)
+          || result.body.match(/Foreman\s+v?(\d+\.\d+(?:\.\d+)?)/i);
+        if (m) return m[1];
+      }
+      // Try API
+      const apiResult = await tryFetch(`${baseUrl}/api/v2/status`);
+      if (apiResult) {
+        const m = apiResult.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/i);
         if (m) return m[1];
       }
       return null;
