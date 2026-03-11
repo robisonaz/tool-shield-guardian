@@ -131,9 +131,13 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
     /gitlab[_-]?version["\s:=]+(\d+\.\d+(?:\.\d+)?)/i,
     /GitLab\s+(?:Community|Enterprise)?\s*Edition\s+(\d+\.\d+(?:\.\d+)?)/i,
     /gon\.version\s*=\s*["'](\d+\.\d+(?:\.\d+)?)/i,
+    /data-qa-selector="version_badge"[^>]*>v?(\d+\.\d+(?:\.\d+)?)/i,
+    /class="version"[^>]*>v?(\d+\.\d+(?:\.\d+)?)/i,
     /<title>[^<]*GitLab[^<]*<\/title>/i,
     /content="GitLab"/i,
     /gitlab-org/i,
+    /assets\/webpack\//i,
+    /\/users\/sign_in/i,
   ]},
   { tool: "Jenkins", patterns: [
     /Jenkins\s+ver\.\s*(\d+\.\d+(?:\.\d+)?)/i,
