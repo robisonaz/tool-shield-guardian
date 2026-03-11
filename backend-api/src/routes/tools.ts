@@ -252,9 +252,26 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
   {
     tool: "GitLab",
     probe: async (baseUrl) => {
+      // Try unauthenticated API first
       const result = await tryFetch(`${baseUrl}/api/v4/version`);
       if (result) {
         const m = result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+      // Try /help page which shows version for logged-out users on many instances
+      const helpResult = await tryFetch(`${baseUrl}/help`);
+      if (helpResult) {
+        const m = helpResult.body.match(/GitLab\s+(?:Community|Enterprise)\s+Edition\s+(\d+\.\d+(?:\.\d+)?)/i)
+          || helpResult.body.match(/v?(\d+\.\d+\.\d+)(?:-(?:ce|ee))?/i);
+        if (m) return m[1];
+      }
+      // Try login page for version in footer/meta
+      const loginResult = await tryFetch(`${baseUrl}/users/sign_in`);
+      if (loginResult) {
+        const m = loginResult.body.match(/GitLab\s+(?:Community|Enterprise)\s+Edition\s+(\d+\.\d+(?:\.\d+)?)/i)
+          || loginResult.body.match(/gon\.version\s*=\s*["'](\d+\.\d+(?:\.\d+)?)/i)
+          || loginResult.body.match(/data-qa-selector="version_badge"[^>]*>v?(\d+\.\d+(?:\.\d+)?)/i)
+          || loginResult.body.match(/class="version"[^>]*>v?(\d+\.\d+(?:\.\d+)?)/i);
         if (m) return m[1];
       }
       return null;
