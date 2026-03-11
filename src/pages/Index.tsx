@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
