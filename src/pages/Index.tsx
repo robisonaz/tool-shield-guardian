@@ -140,7 +140,7 @@ const Index = () => {
           </div>
           <div className="ml-auto flex items-center gap-3">
             <Button
-              onClick={() => navigate("/add-tool")}
+              onClick={() => setAddDialogOpen(true)}
               size="sm"
               className="bg-primary text-primary-foreground hover:bg-primary/80 glow-primary"
             >
