@@ -56,6 +56,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
   ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
+  keycloak: "keycloak",
 };
 
 async function fetchVersionInfo(toolName: string, version: string) {
