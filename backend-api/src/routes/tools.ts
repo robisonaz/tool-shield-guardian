@@ -333,6 +333,55 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
       return null;
     },
   },
+  {
+    tool: "Keycloak",
+    probe: async (baseUrl) => {
+      // Try multiple known Keycloak endpoints
+      // Keycloak 17+ (Quarkus) uses /realms/master, older uses /auth/realms/master
+      const paths = [
+        "/realms/master/.well-known/openid-configuration",
+        "/auth/realms/master/.well-known/openid-configuration",
+        "/realms/master",
+        "/auth/realms/master",
+      ];
+      for (const path of paths) {
+        const result = await tryFetch(`${baseUrl}${path}`);
+        if (result) {
+          // The well-known endpoint doesn't always include version, but confirms Keycloak
+          // Check for version in response headers or body
+          const serverHeader = result.headers.get("server") || "";
+          const poweredBy = result.headers.get("x-powered-by") || "";
+          
+          // Check headers for version
+          for (const h of [serverHeader, poweredBy]) {
+            const m = h.match(/[Kk]eycloak[\/\s]+v?(\d+\.\d+(?:\.\d+)?)/);
+            if (m) return m[1];
+          }
+        }
+      }
+
+      // Try admin API (usually requires auth but some expose version)
+      const infoResult = await tryFetch(`${baseUrl}/auth/admin/serverinfo`);
+      if (infoResult) {
+        const m = infoResult.body.match(/"systemInfo"[^}]*"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/s)
+          || infoResult.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+        if (m) return m[1];
+      }
+
+      // Try the main page or login page for version in HTML
+      for (const path of ["", "/auth", "/auth/admin/master/console"]) {
+        const result = await tryFetch(`${baseUrl}${path}`);
+        if (result) {
+          const m = result.body.match(/Keycloak\s+v?(\d+\.\d+(?:\.\d+)?)/i)
+            || result.body.match(/"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"/i)
+            || result.body.match(/keycloak-theme[\/\-](\d+\.\d+(?:\.\d+)?)/i);
+          if (m) return m[1];
+        }
+      }
+
+      return null;
+    },
+  },
 ];
 
 const VERSION_HEADERS = [
