@@ -181,11 +181,37 @@ export async function fetchCVEsFromNVD(toolName: string, version: string): Promi
 export async function getTools(): Promise<ToolEntry[]> {
   try {
     const rows = await fetchTools();
-    return rows.map(mapDbToEntry);
+    const tools = rows.map(mapDbToEntry);
+    // Load sub-versions for each tool
+    await Promise.all(tools.map(async (tool) => {
+      try {
+        const subRows = await fetchSubVersions(tool.id);
+        tool.sub_versions = subRows.map(mapDbToSubVersion);
+      } catch {
+        tool.sub_versions = [];
+      }
+    }));
+    return tools;
   } catch (err) {
     console.error("Failed to fetch tools:", err);
     return [];
   }
+}
+
+function mapDbToSubVersion(row: any): SubVersionEntry {
+  return {
+    id: row.id,
+    tool_id: row.tool_id,
+    version: row.version,
+    latest_version: row.latest_version,
+    latest_patch_for_cycle: row.latest_patch_for_cycle,
+    is_outdated: row.is_outdated,
+    is_patch_outdated: row.is_patch_outdated,
+    eol: row.eol,
+    lts: row.lts,
+    cycle_label: row.cycle_label,
+    cves: typeof row.cves === "string" ? JSON.parse(row.cves) : (row.cves || []),
+  };
 }
 
 function mapDbToEntry(row: any): ToolEntry {
