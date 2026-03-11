@@ -40,6 +40,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   java: { vendor: "oracle", product: "jdk" },
   dotnet: { vendor: "microsoft", product: ".net" },
   keycloak: { vendor: "redhat", product: "keycloak" },
+  jumpserver: { vendor: "fit2cloud", product: "jumpserver" },
 };
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
