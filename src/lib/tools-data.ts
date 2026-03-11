@@ -31,6 +31,7 @@ const SUPPORTED_TOOLS = [
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
   "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver", "foreman",
+  "puppet server", "puppet agent",
 ];
 
 function compareVersions(a: string, b: string): number {
