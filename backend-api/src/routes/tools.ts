@@ -40,6 +40,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   java: { vendor: "oracle", product: "jdk" },
   dotnet: { vendor: "microsoft", product: ".net" },
   keycloak: { vendor: "redhat", product: "keycloak" },
+  jumpserver: { vendor: "fit2cloud", product: "jumpserver" },
 };
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
@@ -192,6 +193,14 @@ const DETECTION_PATTERNS: { tool: string; patterns: RegExp[] }[] = [
   { tool: "Portainer", patterns: [
     /<title>[^<]*Portainer[^<]*<\/title>/i,
     /portainer\.js/i,
+  ]},
+  { tool: "JumpServer", patterns: [
+    /<title>[^<]*JumpServer[^<]*<\/title>/i,
+    /<title>[^<]*Jump\s*Server[^<]*<\/title>/i,
+    /jumpserver/i,
+    /js-app/i,
+    /lina/i,
+    /luna/i,
   ]},
 ];
 
@@ -379,6 +388,28 @@ const KNOWN_API_ENDPOINTS: { tool: string; probe: (baseUrl: string) => Promise<s
         }
       }
 
+      return null;
+    },
+  },
+  {
+    tool: "JumpServer",
+    probe: async (baseUrl) => {
+      // Try JumpServer API health/version endpoints
+      for (const path of ["/api/v1/health/", "/api/health/", "/api/v1/settings/public/"]) {
+        const result = await tryFetch(`${baseUrl}${path}`);
+        if (result) {
+          const m = result.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i)
+            || result.body.match(/"CURRENT_VERSION"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+          if (m) return m[1];
+        }
+      }
+      // Try main page for version in HTML/JS
+      const mainResult = await tryFetch(`${baseUrl}/`);
+      if (mainResult) {
+        const m = mainResult.body.match(/JumpServer\s+v?(\d+\.\d+(?:\.\d+)?)/i)
+          || mainResult.body.match(/"version"\s*:\s*"v?(\d+\.\d+(?:\.\d+)?)"/i);
+        if (m) return m[1];
+      }
       return null;
     },
   },
