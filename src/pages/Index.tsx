@@ -18,6 +18,7 @@ const Index = () => {
   const [rechecking, setRechecking] = useState(false);
   const navigate = useNavigate();
   const { isAdmin, signOut, user } = useAuth();
+  const { branding } = useBranding();
 
   const loadTools = async () => {
     const data = await getTools();
