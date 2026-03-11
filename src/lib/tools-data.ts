@@ -57,12 +57,46 @@ const PRODUCT_SLUGS: Record<string, string> = {
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
   keycloak: "keycloak",
-  jumpserver: "jumpserver",
 };
+
+// GitHub repos for tools not on endoflife.date
+const GITHUB_REPOS: Record<string, string> = {
+  jumpserver: "jumpserver/jumpserver",
+};
+
+async function fetchLatestFromGitHub(repo: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+      headers: { Accept: "application/vnd.github.v3+json" },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const tag = data.tag_name || "";
+    const m = tag.match(/v?(\d+\.\d+(?:\.\d+)?)/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchVersionInfo(toolName: string, version: string) {
   const empty = { latest_version: null, latest_patch_for_cycle: null, eol: null, lts: null, cycle_label: null };
-  const slug = PRODUCT_SLUGS[toolName.toLowerCase().trim()];
+  const key = toolName.toLowerCase().trim();
+
+  // Try GitHub releases for tools not on endoflife.date
+  const ghRepo = GITHUB_REPOS[key];
+  if (ghRepo) {
+    const latest = await fetchLatestFromGitHub(ghRepo);
+    return {
+      latest_version: latest,
+      latest_patch_for_cycle: latest,
+      eol: null,
+      lts: null,
+      cycle_label: null,
+    };
+  }
+
+  const slug = PRODUCT_SLUGS[key];
   if (!slug) return empty;
 
   try {
