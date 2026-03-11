@@ -1,4 +1,18 @@
-import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion } from "@/lib/api-client";
+
+export interface SubVersionEntry {
+  id: string;
+  tool_id: string;
+  version: string;
+  latest_version: string | null;
+  latest_patch_for_cycle: string | null;
+  is_outdated: boolean | null;
+  is_patch_outdated: boolean | null;
+  eol: string | boolean | null;
+  lts: string | boolean | null;
+  cycle_label: string | null;
+  cves: CVEEntry[];
+}
 
 export interface ToolEntry {
   id: string;
@@ -16,6 +30,7 @@ export interface ToolEntry {
   cycle_label: string | null;
   cves: CVEEntry[];
   loading?: boolean;
+  sub_versions?: SubVersionEntry[];
 }
 
 export interface CVEEntry {
@@ -166,11 +181,37 @@ export async function fetchCVEsFromNVD(toolName: string, version: string): Promi
 export async function getTools(): Promise<ToolEntry[]> {
   try {
     const rows = await fetchTools();
-    return rows.map(mapDbToEntry);
+    const tools = rows.map(mapDbToEntry);
+    // Load sub-versions for each tool
+    await Promise.all(tools.map(async (tool) => {
+      try {
+        const subRows = await fetchSubVersions(tool.id);
+        tool.sub_versions = subRows.map(mapDbToSubVersion);
+      } catch {
+        tool.sub_versions = [];
+      }
+    }));
+    return tools;
   } catch (err) {
     console.error("Failed to fetch tools:", err);
     return [];
   }
+}
+
+function mapDbToSubVersion(row: any): SubVersionEntry {
+  return {
+    id: row.id,
+    tool_id: row.tool_id,
+    version: row.version,
+    latest_version: row.latest_version,
+    latest_patch_for_cycle: row.latest_patch_for_cycle,
+    is_outdated: row.is_outdated,
+    is_patch_outdated: row.is_patch_outdated,
+    eol: row.eol,
+    lts: row.lts,
+    cycle_label: row.cycle_label,
+    cves: typeof row.cves === "string" ? JSON.parse(row.cves) : (row.cves || []),
+  };
 }
 
 function mapDbToEntry(row: any): ToolEntry {
@@ -323,6 +364,46 @@ export async function updateTool(id: string, name: string, version: string, sour
 
   const row = await updateToolApi(id, toolData);
   return mapDbToEntry(row);
+}
+
+export async function addSubVersionToTool(toolId: string, toolName: string, version: string): Promise<SubVersionEntry> {
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
+
+  try {
+    [versionResult, cves] = await Promise.all([
+      fetchVersionInfo(toolName, version),
+      fetchCVEsFromNVD(toolName, version),
+    ]);
+  } catch (err) {
+    console.error("Erro ao buscar dados da sub-versão:", err);
+  }
+
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(version, versionResult.latest_version) < 0
+    : null;
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(version, versionResult.latest_patch_for_cycle) < 0
+    : null;
+
+  const data = {
+    version: version.trim(),
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
+    cves,
+  };
+
+  const row = await createSubVersion(toolId, data);
+  return mapDbToSubVersion(row);
+}
+
+export async function removeSubVersion(toolId: string, versionId: string) {
+  await deleteSubVersion(toolId, versionId);
 }
 
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>

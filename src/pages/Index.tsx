@@ -4,7 +4,7 @@ import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { Button } from "@/components/ui/button";
-import { addTool, getTools, removeTool, recheckTool, updateTool, type ToolEntry } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -70,6 +70,33 @@ const Index = () => {
     } catch (err) {
       console.error("Erro ao atualizar:", err);
       toast.error("Erro ao atualizar ferramenta.");
+    }
+  };
+
+  const handleAddSubVersion = async (toolId: string, toolName: string, version: string) => {
+    toast.info(`Buscando CVEs para "${toolName} ${version}"...`);
+    try {
+      const sv = await addSubVersionToTool(toolId, toolName, version);
+      await loadTools();
+      if (sv.cves.length > 0) {
+        toast.error(`${sv.cves.length} CVE(s) encontrada(s) para ${toolName} ${version}!`);
+      } else {
+        toast.success(`Nenhuma CVE para ${toolName} ${version}.`);
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar sub-versão:", err);
+      toast.error("Erro ao adicionar sub-versão.");
+    }
+  };
+
+  const handleRemoveSubVersion = async (toolId: string, versionId: string) => {
+    try {
+      await removeSubVersion(toolId, versionId);
+      await loadTools();
+      toast.info("Sub-versão removida.");
+    } catch (err) {
+      console.error("Erro ao remover sub-versão:", err);
+      toast.error("Erro ao remover sub-versão.");
     }
   };
 
@@ -162,7 +189,7 @@ const Index = () => {
               </Button>
             )}
           </div>
-          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} />
+          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} />
         </motion.div>
       </main>
     </div>
