@@ -670,4 +670,68 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
+// ─── Sub-versions CRUD ───
+
+// List sub-versions for a tool
+router.get("/:id/versions", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    // Verify tool ownership
+    const { rows: toolRows } = await pool.query("SELECT id FROM tools WHERE id = $1 AND user_id = $2", [id, userId]);
+    if (toolRows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+
+    const { rows } = await pool.query(
+      "SELECT * FROM tool_versions WHERE tool_id = $1 ORDER BY created_at DESC",
+      [id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("List sub-versions error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// Create sub-version
+router.post("/:id/versions", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    // Verify tool ownership
+    const { rows: toolRows } = await pool.query("SELECT id FROM tools WHERE id = $1 AND user_id = $2", [id, userId]);
+    if (toolRows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+
+    const { version, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves } = req.body;
+    if (!version) return res.status(400).json({ error: "version required" });
+
+    const { rows } = await pool.query(
+      `INSERT INTO tool_versions (tool_id, version, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [id, version, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || [])]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error("Create sub-version error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// Delete sub-version
+router.delete("/:id/versions/:versionId", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id, versionId } = req.params;
+    // Verify tool ownership
+    const { rows: toolRows } = await pool.query("SELECT id FROM tools WHERE id = $1 AND user_id = $2", [id, userId]);
+    if (toolRows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+
+    const { rowCount } = await pool.query("DELETE FROM tool_versions WHERE id = $1 AND tool_id = $2", [versionId, id]);
+    if (rowCount === 0) return res.status(404).json({ error: "Sub-versão não encontrada" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete sub-version error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
 export default router;

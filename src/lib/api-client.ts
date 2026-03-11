@@ -194,4 +194,20 @@ export async function deleteTool(id: string) {
   return apiFetch(`/tools/${id}`, { method: "DELETE" });
 }
 
+// Sub-versions
+export async function fetchSubVersions(toolId: string) {
+  return apiFetch<any[]>(`/tools/${toolId}/versions`);
+}
+
+export async function createSubVersion(toolId: string, data: Record<string, any>) {
+  return apiFetch<any>(`/tools/${toolId}/versions`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSubVersion(toolId: string, versionId: string) {
+  return apiFetch(`/tools/${toolId}/versions/${versionId}`, { method: "DELETE" });
+}
+
 export { getTokens, setTokens, clearTokens };
