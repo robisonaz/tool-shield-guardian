@@ -31,6 +31,7 @@ const SUPPORTED_TOOLS = [
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
   "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver", "foreman",
+  "puppet server", "puppet agent",
 ];
 
 function compareVersions(a: string, b: string): number {
@@ -57,6 +58,9 @@ const PRODUCT_SLUGS: Record<string, string> = {
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
   keycloak: "keycloak",
+  "puppet server": "puppet",
+  "puppet agent": "puppet",
+  puppet: "puppet",
 };
 
 // GitHub repos for tools not on endoflife.date
