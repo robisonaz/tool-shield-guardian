@@ -3,13 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
+import { AddToolForm } from "@/components/AddToolForm";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const Index = () => {
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [tools, setTools] = useState<ToolEntry[]>([]);
   const [rechecking, setRechecking] = useState(false);
   const navigate = useNavigate();
