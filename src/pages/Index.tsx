@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -17,6 +18,7 @@ const Index = () => {
   const [rechecking, setRechecking] = useState(false);
   const navigate = useNavigate();
   const { isAdmin, signOut, user } = useAuth();
+  const { branding } = useBranding();
 
   const loadTools = async () => {
     const data = await getTools();
@@ -129,14 +131,18 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-            <ShieldCheck className="h-6 w-6 text-primary text-glow" />
-          </div>
+          {branding.logo_url ? (
+            <img src={branding.logo_url} alt={branding.app_name} className="h-9 w-9 object-contain" />
+          ) : (
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+              <ShieldCheck className="h-6 w-6 text-primary text-glow" />
+            </div>
+          )}
           <div>
             <h1 className="text-xl font-sans font-bold text-foreground">
-              SecVersions
+              {branding.app_name}
             </h1>
-            <p className="text-xs text-muted-foreground">Monitoramento de versões e vulnerabilidades</p>
+            <p className="text-xs text-muted-foreground">{branding.app_subtitle}</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <Button

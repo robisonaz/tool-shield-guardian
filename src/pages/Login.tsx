@@ -6,8 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login, getPublicProviders } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+
+function LoginHeader() {
+  const { branding } = useBranding();
+  return (
+    <div className="text-center mb-8">
+      {branding.logo_url ? (
+        <img src={branding.logo_url} alt={branding.app_name} className="h-12 w-12 object-contain mx-auto mb-4" />
+      ) : (
+        <div className="inline-flex p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+          <ShieldCheck className="h-8 w-8 text-primary text-glow" />
+        </div>
+      )}
+      <h1 className="text-2xl font-sans font-bold text-foreground">{branding.app_name}</h1>
+      <p className="text-sm text-muted-foreground mt-1">Entrar na plataforma</p>
+    </div>
+  );
+}
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -62,15 +80,7 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-8">
-          <div className="inline-flex p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
-            <ShieldCheck className="h-8 w-8 text-primary text-glow" />
-          </div>
-          <h1 className="text-2xl font-sans font-bold text-foreground">SecVersions</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Entrar na plataforma
-          </p>
-        </div>
+        <LoginHeader />
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
           <form onSubmit={handleLocalAuth} className="space-y-4">

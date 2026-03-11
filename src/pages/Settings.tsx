@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, KeyRound } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, KeyRound, Palette } from "lucide-react";
+import { BrandingSettingsSection } from "@/components/BrandingSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,8 +125,14 @@ const Settings = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-6 max-w-3xl">
+      <main className="container mx-auto px-4 py-8 space-y-8 max-w-3xl">
+        {/* Branding Section */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <BrandingSettingsSection />
+        </motion.div>
+
+        {/* OIDC Section */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-sans font-semibold text-foreground">Provedores OIDC</h2>
             <Button size="sm" onClick={addProvider}>
