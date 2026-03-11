@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Plus, Loader2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import type { ToolEntry } from "@/lib/tools-data";
+import type { ToolEntry, SubVersionEntry } from "@/lib/tools-data";
 import { AVAILABLE_TOOLS } from "@/lib/tools-data";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -12,6 +12,8 @@ interface ToolTableProps {
   tools: ToolEntry[];
   onRemove: (id: string) => void;
   onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
+  onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
+  onRemoveSubVersion?: (toolId: string, versionId: string) => void;
 }
 
 function EolBadge({ eol }: { eol: string | boolean | null }) {
@@ -43,13 +45,167 @@ function LtsBadge({ lts }: { lts: string | boolean | null }) {
   );
 }
 
-function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: string) => void; onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void }) {
+function CvesSummary({ cves }: { cves: { id: string; severity: "critical" | "high" | "medium" | "low" }[] }) {
+  if (cves.length === 0) {
+    return (
+      <span className="flex items-center gap-1.5 text-success">
+        <Shield className="h-3.5 w-3.5" />
+        <span className="text-sm">Nenhum</span>
+      </span>
+    );
+  }
+  const maxSeverity = cves.reduce((max, cve) => {
+    const order = { critical: 4, high: 3, medium: 2, low: 1 };
+    return order[cve.severity] > order[max] ? cve.severity : max;
+  }, "low" as "critical" | "high" | "medium" | "low");
+  const config = {
+    critical: { color: "text-destructive", icon: AlertTriangle },
+    high: { color: "text-high", icon: AlertTriangle },
+    medium: { color: "text-warning", icon: AlertTriangle },
+    low: { color: "text-muted-foreground", icon: Shield },
+  };
+  const { color, icon: Icon } = config[maxSeverity];
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className={`h-3.5 w-3.5 ${color}`} />
+      <span className="text-sm font-medium text-destructive">{cves.length} CVE{cves.length > 1 ? "s" : ""}</span>
+      <div className="flex items-center gap-0.5 ml-1">
+        {cves.some(c => c.severity === "critical") && <span className="h-2 w-2 rounded-full bg-destructive" title="Critical" />}
+        {cves.some(c => c.severity === "high") && <span className="h-2 w-2 rounded-full bg-high" title="High" />}
+        {cves.some(c => c.severity === "medium") && <span className="h-2 w-2 rounded-full bg-warning" title="Medium" />}
+        {cves.some(c => c.severity === "low") && <span className="h-2 w-2 rounded-full bg-muted-foreground" title="Low" />}
+      </div>
+    </div>
+  );
+}
+
+function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolName: string; onRemove: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const status = sv.is_outdated === null ? "unknown" : sv.is_outdated ? "outdated" : "current";
+
+  return (
+    <>
+      <tr
+        className="border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors bg-secondary/10"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <td className="px-4 py-2 pl-10">
+          {sv.cves.length > 0 || sv.latest_patch_for_cycle ? (
+            expanded ? <ChevronDown className="h-3 w-3 text-primary" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          ) : <span className="w-3 inline-block" />}
+        </td>
+        <td className="px-4 py-2 text-xs text-muted-foreground italic">
+          <div className="flex items-center gap-2">
+            <Layers className="h-3 w-3 text-muted-foreground/60" />
+            Sub-versão
+            <LtsBadge lts={sv.lts} />
+            <EolBadge eol={sv.eol} />
+          </div>
+        </td>
+        <td className="px-4 py-2 text-accent text-sm">{sv.version}</td>
+        <td className="px-4 py-2 text-muted-foreground text-sm">{sv.latest_version || "—"}</td>
+        <td className="px-4 py-2"><StatusBadge status={status} /></td>
+        <td className="px-4 py-2"><CvesSummary cves={sv.cves} /></td>
+        <td className="px-4 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </td>
+      </tr>
+      <AnimatePresence>
+        {expanded && (sv.cves.length > 0 || sv.latest_patch_for_cycle) && (
+          <tr>
+            <td colSpan={7} className="p-0">
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-8 py-3 bg-secondary/20 border-b border-border/50 space-y-3">
+                  {sv.latest_patch_for_cycle && (
+                    <div className="rounded bg-card border border-border p-3">
+                      <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
+                        <ArrowUpCircle className="h-3.5 w-3.5" />
+                        Versão Recomendada
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {sv.cycle_label})</span>
+                          <span className={`font-mono font-semibold ${sv.is_patch_outdated ? "text-warning" : "text-success"}`}>{sv.latest_patch_for_cycle}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Última Estável</span>
+                          <span className="font-mono font-semibold text-primary">{sv.latest_version}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
+                          {sv.eol === true || (typeof sv.eol === "string" && new Date(sv.eol) < new Date()) ? (
+                            <span className="text-destructive text-xs font-medium">⚠ Fim de vida (EOL)</span>
+                          ) : sv.eol === false ? (
+                            <span className="text-success text-xs font-medium">✓ Suportado</span>
+                          ) : typeof sv.eol === "string" ? (
+                            <span className="text-warning text-xs font-medium">Suporte até {sv.eol}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {sv.cves.length > 0 && (
+                    <>
+                      <h4 className="text-xs font-sans font-semibold text-destructive tracking-wider uppercase">Vulnerabilidades</h4>
+                      <div className="space-y-2">
+                        {sv.cves.map(cve => (
+                          <div key={cve.id} className="flex items-start gap-3 p-2 rounded bg-card border border-border">
+                            <SeverityBadge severity={cve.severity} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <a href={`https://nvd.nist.gov/vuln/detail/${cve.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-accent hover:underline" onClick={e => e.stopPropagation()}>{cve.id}</a>
+                                <span className="text-xs text-muted-foreground">{cve.publishedDate}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{cve.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </td>
+          </tr>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }: {
+  tool: ToolEntry;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
+  onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
+  onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
   const [editUrl, setEditUrl] = useState(tool.source_url || "");
+  const [addingSubVersion, setAddingSubVersion] = useState(false);
+  const [newSubVersion, setNewSubVersion] = useState("");
+  const [savingSubVersion, setSavingSubVersion] = useState(false);
   const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
+
+  const hasDetails = tool.cves.length > 0 || tool.latest_patch_for_cycle || (tool.sub_versions && tool.sub_versions.length > 0);
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
@@ -64,6 +220,21 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
     setEditing(false);
   };
 
+  const handleAddSubVersion = async () => {
+    if (!newSubVersion.trim() || !onAddSubVersion) return;
+    setSavingSubVersion(true);
+    await onAddSubVersion(tool.id, tool.name, newSubVersion.trim());
+    setNewSubVersion("");
+    setAddingSubVersion(false);
+    setSavingSubVersion(false);
+  };
+
+  // Aggregate all CVEs (main + sub-versions) for display
+  const allCves = [
+    ...tool.cves,
+    ...(tool.sub_versions?.flatMap(sv => sv.cves) || []),
+  ];
+
   return (
     <>
       <tr
@@ -71,7 +242,7 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         onClick={() => !editing && setExpanded(!expanded)}
       >
         <td className="px-4 py-3">
-          {(tool.cves.length > 0 || tool.latest_patch_for_cycle) ? (
+          {hasDetails ? (
             expanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
           ) : (
             <span className="w-4 inline-block" />
@@ -92,6 +263,12 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
               {tool.source_url && (
                 <span title={`URL: ${tool.source_url}`}>
                   <Globe className="h-3 w-3 text-primary/60" />
+                </span>
+              )}
+              {tool.sub_versions && tool.sub_versions.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/20">
+                  <Layers className="h-3 w-3" />
+                  +{tool.sub_versions.length}
                 </span>
               )}
               <LtsBadge lts={tool.lts} />
@@ -128,83 +305,29 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
         <td className="px-4 py-3 text-muted-foreground">{tool.latest_version || "—"}</td>
         <td className="px-4 py-3"><StatusBadge status={status} /></td>
-        <td className="px-4 py-3">
-          {tool.cves.length > 0 ? (
-            <div className="flex items-center gap-1.5">
-              {(() => {
-                const maxSeverity = tool.cves.reduce((max, cve) => {
-                  const order = { critical: 4, high: 3, medium: 2, low: 1 };
-                  return order[cve.severity] > order[max] ? cve.severity : max;
-                }, "low" as "critical" | "high" | "medium" | "low");
-                const config = {
-                  critical: { color: "text-destructive", icon: AlertTriangle },
-                  high: { color: "text-high", icon: AlertTriangle },
-                  medium: { color: "text-warning", icon: AlertTriangle },
-                  low: { color: "text-muted-foreground", icon: Shield },
-                };
-                const { color, icon: Icon } = config[maxSeverity];
-                return <Icon className={`h-3.5 w-3.5 ${color}`} />;
-              })()}
-              <span className="text-sm font-medium text-destructive">{tool.cves.length} CVE{tool.cves.length > 1 ? "s" : ""}</span>
-              <div className="flex items-center gap-0.5 ml-1">
-                {tool.cves.some(c => c.severity === "critical") && (
-                  <span className="h-2 w-2 rounded-full bg-destructive" title="Critical" />
-                )}
-                {tool.cves.some(c => c.severity === "high") && (
-                  <span className="h-2 w-2 rounded-full bg-high" title="High" />
-                )}
-                {tool.cves.some(c => c.severity === "medium") && (
-                  <span className="h-2 w-2 rounded-full bg-warning" title="Medium" />
-                )}
-                {tool.cves.some(c => c.severity === "low") && (
-                  <span className="h-2 w-2 rounded-full bg-muted-foreground" title="Low" />
-                )}
-              </div>
-            </div>
-          ) : (
-            <span className="flex items-center gap-1.5 text-success">
-              <Shield className="h-3.5 w-3.5" />
-              <span className="text-sm">Nenhum</span>
-            </span>
-          )}
-        </td>
+        <td className="px-4 py-3"><CvesSummary cves={allCves} /></td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1">
             {editing ? (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }}
-                  className="text-success hover:text-success hover:bg-success/10 h-8 w-8 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }} className="text-success hover:text-success hover:bg-success/10 h-8 w-8 p-0">
                   <Check className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }}
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0">
                   <X className="h-4 w-4" />
                 </Button>
               </>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-                  className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0" title="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); onRemove(tool.id); }}
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                >
+                {onAddSubVersion && (
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setExpanded(true); setAddingSubVersion(true); }} className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 p-0" title="Adicionar sub-versão">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRemove(tool.id); }} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0" title="Remover">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </>
@@ -213,97 +336,122 @@ function ToolRow({ tool, onRemove, onEdit }: { tool: ToolEntry; onRemove: (id: s
         </td>
       </tr>
       <AnimatePresence>
-        {expanded && (tool.cves.length > 0 || tool.latest_patch_for_cycle) && (
-          <tr>
-            <td colSpan={7} className="p-0">
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="px-6 py-4 bg-secondary/30 border-b border-border space-y-4">
-                  {/* Version recommendation */}
-                  {tool.latest_patch_for_cycle && (
-                    <div className="rounded bg-card border border-border p-3">
-                      <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
-                        <ArrowUpCircle className="h-3.5 w-3.5" />
-                        Versão Recomendada
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycle_label})</span>
-                          <span className={`font-mono font-semibold ${tool.is_patch_outdated ? "text-warning" : "text-success"}`}>
-                            {tool.latest_patch_for_cycle}
-                          </span>
-                          {tool.is_patch_outdated && (
-                            <span className="text-xs text-warning ml-2">⬆ atualização disponível</span>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Última Estável</span>
-                          <span className="font-mono font-semibold text-primary">{tool.latest_version}</span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
-                          <span className="flex items-center gap-1.5">
-                            {tool.eol === true || (typeof tool.eol === "string" && new Date(tool.eol) < new Date()) ? (
-                              <span className="text-destructive text-xs font-medium">⚠ Fim de vida (EOL)</span>
-                            ) : tool.eol === false ? (
-                              <span className="text-success text-xs font-medium">✓ Suportado</span>
-                            ) : typeof tool.eol === "string" ? (
-                              <span className="text-warning text-xs font-medium">Suporte até {tool.eol}</span>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+        {expanded && (
+          <>
+            {/* Sub-versions */}
+            {tool.sub_versions && tool.sub_versions.map(sv => (
+              <SubVersionRow
+                key={sv.id}
+                sv={sv}
+                toolName={tool.name}
+                onRemove={() => onRemoveSubVersion?.(tool.id, sv.id)}
+              />
+            ))}
 
-                  {/* CVEs */}
-                  {tool.cves.length > 0 && (
-                    <>
-                      <h4 className="text-xs font-sans font-semibold text-destructive tracking-wider uppercase">
-                        Vulnerabilidades Conhecidas
-                      </h4>
-                      <div className="space-y-2">
-                        {tool.cves.map(cve => (
-                          <div key={cve.id} className="flex items-start gap-3 p-3 rounded bg-card border border-border">
-                            <SeverityBadge severity={cve.severity} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <a
-                                  href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm font-mono text-accent hover:underline"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  {cve.id}
-                                </a>
-                                <span className="text-xs text-muted-foreground">{cve.publishedDate}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1">{cve.description}</p>
+            {/* Add sub-version form */}
+            {addingSubVersion && (
+              <tr>
+                <td colSpan={7} className="p-0">
+                  <div className="px-6 py-3 bg-primary/5 border-b border-border flex items-center gap-3">
+                    <Layers className="h-4 w-4 text-primary ml-4" />
+                    <span className="text-xs text-muted-foreground">Nova sub-versão para <strong>{tool.name}</strong>:</span>
+                    <Input
+                      value={newSubVersion}
+                      onChange={(e) => setNewSubVersion(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddSubVersion()}
+                      placeholder="Ex: 7.33.0"
+                      className="h-7 text-sm bg-secondary border-border w-32"
+                      autoFocus
+                    />
+                    <Button size="sm" onClick={handleAddSubVersion} disabled={savingSubVersion || !newSubVersion.trim()} className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/80">
+                      {savingSubVersion ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                      Adicionar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setAddingSubVersion(false); setNewSubVersion(""); }} className="h-7 text-xs">
+                      Cancelar
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {/* Main tool details */}
+            {(tool.cves.length > 0 || tool.latest_patch_for_cycle) && (
+              <tr>
+                <td colSpan={7} className="p-0">
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 py-4 bg-secondary/30 border-b border-border space-y-4">
+                      {tool.latest_patch_for_cycle && (
+                        <div className="rounded bg-card border border-border p-3">
+                          <h4 className="text-xs font-sans font-semibold text-primary mb-2 tracking-wider uppercase flex items-center gap-1.5">
+                            <ArrowUpCircle className="h-3.5 w-3.5" />
+                            Versão Recomendada ({tool.version})
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Corrigida (ciclo {tool.cycle_label})</span>
+                              <span className={`font-mono font-semibold ${tool.is_patch_outdated ? "text-warning" : "text-success"}`}>{tool.latest_patch_for_cycle}</span>
+                              {tool.is_patch_outdated && <span className="text-xs text-warning ml-2">⬆ atualização disponível</span>}
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Última Estável</span>
+                              <span className="font-mono font-semibold text-primary">{tool.latest_version}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Status do Ciclo</span>
+                              {tool.eol === true || (typeof tool.eol === "string" && new Date(tool.eol) < new Date()) ? (
+                                <span className="text-destructive text-xs font-medium">⚠ Fim de vida (EOL)</span>
+                              ) : tool.eol === false ? (
+                                <span className="text-success text-xs font-medium">✓ Suportado</span>
+                              ) : typeof tool.eol === "string" ? (
+                                <span className="text-warning text-xs font-medium">Suporte até {tool.eol}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            </td>
-          </tr>
+                        </div>
+                      )}
+                      {tool.cves.length > 0 && (
+                        <>
+                          <h4 className="text-xs font-sans font-semibold text-destructive tracking-wider uppercase">
+                            Vulnerabilidades ({tool.version})
+                          </h4>
+                          <div className="space-y-2">
+                            {tool.cves.map(cve => (
+                              <div key={cve.id} className="flex items-start gap-3 p-3 rounded bg-card border border-border">
+                                <SeverityBadge severity={cve.severity} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <a href={`https://nvd.nist.gov/vuln/detail/${cve.id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-accent hover:underline" onClick={e => e.stopPropagation()}>{cve.id}</a>
+                                    <span className="text-xs text-muted-foreground">{cve.publishedDate}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">{cve.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                </td>
+              </tr>
+            )}
+          </>
         )}
       </AnimatePresence>
     </>
   );
 }
 
-export function ToolTable({ tools, onRemove, onEdit }: ToolTableProps) {
+export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }: ToolTableProps) {
   if (tools.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
@@ -326,12 +474,19 @@ export function ToolTable({ tools, onRemove, onEdit }: ToolTableProps) {
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
-              <th className="px-4 py-3 w-24" />
+              <th className="px-4 py-3 w-28" />
             </tr>
           </thead>
           <tbody>
             {tools.map((tool) => (
-              <ToolRow key={tool.id} tool={tool} onRemove={onRemove} onEdit={onEdit} />
+              <ToolRow
+                key={tool.id}
+                tool={tool}
+                onRemove={onRemove}
+                onEdit={onEdit}
+                onAddSubVersion={onAddSubVersion}
+                onRemoveSubVersion={onRemoveSubVersion}
+              />
             ))}
           </tbody>
         </table>
