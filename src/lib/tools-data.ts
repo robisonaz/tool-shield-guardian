@@ -62,6 +62,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
 // GitHub repos for tools not on endoflife.date
 const GITHUB_REPOS: Record<string, string> = {
   jumpserver: "jumpserver/jumpserver",
+  foreman: "theforeman/foreman",
 };
 
 async function fetchLatestFromGitHub(repo: string): Promise<string | null> {
