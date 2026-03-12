@@ -196,65 +196,118 @@ async function probeZabbixAgent(host: string, port: number): Promise<{ tool: str
 }
 
 // PostgreSQL doesn't send a banner — we must send a StartupMessage to get the version
+// If SSL is required, we upgrade to TLS first; otherwise send plain StartupMessage.
 async function probePostgreSQL(host: string, port: number): Promise<{ tool: string; version: string | null }> {
+  const tls = await import("tls");
+
+  function sendStartupAndCollect(sock: net.Socket | import("tls").TLSSocket): Promise<string | null> {
+    return new Promise((resolve) => {
+      const params = "user\0postgres\0database\0postgres\0\0";
+      const paramsBuffer = Buffer.from(params, "utf8");
+      const startupLen = 4 + 4 + paramsBuffer.length;
+      const startup = Buffer.alloc(startupLen);
+      startup.writeInt32BE(startupLen, 0);
+      startup.writeInt32BE(196608, 4); // protocol 3.0
+      paramsBuffer.copy(startup, 8);
+      sock.write(startup);
+
+      let collected = Buffer.alloc(0);
+      const onData = (chunk: Buffer) => {
+        collected = Buffer.concat([collected, chunk]);
+        const str = collected.toString("utf8");
+
+        // Look for server_version in ParameterStatus messages ('S' type)
+        const vMatch = str.match(/server_version\0([\d.]+)/);
+        if (vMatch) {
+          sock.removeListener("data", onData);
+          sock.destroy();
+          resolve(vMatch[1]);
+          return;
+        }
+
+        // Check ErrorResponse for version info (e.g. "PostgreSQL 15.4 on x86_64...")
+        const errMatch = str.match(/PostgreSQL\s+([\d.]+)/i);
+        if (errMatch) {
+          sock.removeListener("data", onData);
+          sock.destroy();
+          resolve(errMatch[1]);
+          return;
+        }
+
+        // Parse binary messages: look for 'S' (ParameterStatus) or 'R' (Auth) or 'E' (Error)
+        let offset = 0;
+        while (offset < collected.length) {
+          if (offset + 5 > collected.length) break;
+          const msgType = String.fromCharCode(collected[offset]);
+          const msgLen = collected.readInt32BE(offset + 1);
+          if (offset + 1 + msgLen > collected.length) break; // incomplete message
+
+          if (msgType === "S") {
+            // ParameterStatus: key\0value\0
+            const payload = collected.subarray(offset + 5, offset + 1 + msgLen).toString("utf8");
+            if (payload.startsWith("server_version\0")) {
+              const ver = payload.replace("server_version\0", "").replace(/\0$/, "");
+              const verNum = ver.match(/([\d]+\.[\d]+(?:\.[\d]+)?)/);
+              if (verNum) {
+                sock.removeListener("data", onData);
+                sock.destroy();
+                resolve(verNum[1]);
+                return;
+              }
+            }
+          }
+          offset += 1 + msgLen;
+        }
+
+        // Safety: if we collected enough data, stop
+        if (collected.length > 4096) {
+          sock.removeListener("data", onData);
+          sock.destroy();
+          resolve(null);
+        }
+      };
+      sock.on("data", onData);
+      setTimeout(() => {
+        sock.removeAllListeners("data");
+        sock.destroy();
+        resolve(null);
+      }, 3000);
+    });
+  }
+
   return new Promise((resolve) => {
     const socket = new net.Socket();
-    socket.setTimeout(3000);
+    socket.setTimeout(4000);
+
     socket.once("connect", () => {
-      // Send SSLRequest first (int32 length=8, int32 code=80877103)
-      // Server responds with 'S' (supports SSL) or 'N' (no SSL)
+      // Send SSLRequest
       const sslReq = Buffer.alloc(8);
       sslReq.writeInt32BE(8, 0);
       sslReq.writeInt32BE(80877103, 4);
       socket.write(sslReq);
 
-      socket.once("data", (sslResponse) => {
-        // After SSL response, send a StartupMessage with protocol 3.0
-        // StartupMessage: int32 length, int32 protocol(196608 = 3.0), "user\0postgres\0database\0postgres\0\0"
-        const params = "user\0postgres\0database\0postgres\0\0";
-        const paramsBuffer = Buffer.from(params, "utf8");
-        const startupLen = 4 + 4 + paramsBuffer.length;
-        const startup = Buffer.alloc(startupLen);
-        startup.writeInt32BE(startupLen, 0);
-        startup.writeInt32BE(196608, 4); // protocol 3.0
-        paramsBuffer.copy(startup, 8);
-        socket.write(startup);
+      socket.once("data", async (sslResponse) => {
+        const sslByte = String.fromCharCode(sslResponse[0]);
 
-        let collected = Buffer.alloc(0);
-        const onData = (chunk: Buffer) => {
-          collected = Buffer.concat([collected, chunk]);
-          const str = collected.toString("utf8");
-          // Look for server_version in the parameter status messages
-          const vMatch = str.match(/server_version\0([\d.]+)/);
-          if (vMatch) {
-            socket.removeListener("data", onData);
-            socket.destroy();
-            resolve({ tool: "PostgreSQL", version: vMatch[1] });
-            return;
-          }
-          // Also check for ErrorResponse which contains version info sometimes
-          const errMatch = str.match(/PostgreSQL\s+([\d.]+)/i);
-          if (errMatch) {
-            socket.removeListener("data", onData);
-            socket.destroy();
-            resolve({ tool: "PostgreSQL", version: errMatch[1] });
-            return;
-          }
-          // If we got auth request or error, we know it's PostgreSQL
-          if (collected.length > 100) {
-            socket.removeListener("data", onData);
-            socket.destroy();
+        if (sslByte === "S") {
+          // Server supports SSL — upgrade to TLS
+          const tlsSocket = tls.connect({ socket, rejectUnauthorized: false });
+          tlsSocket.once("secureConnect", async () => {
+            const version = await sendStartupAndCollect(tlsSocket);
+            resolve({ tool: "PostgreSQL", version });
+          });
+          tlsSocket.once("error", () => {
+            tlsSocket.destroy();
             resolve({ tool: "PostgreSQL", version: null });
-          }
-        };
-        socket.on("data", onData);
-        setTimeout(() => {
-          socket.removeAllListeners("data");
-          socket.destroy();
-          resolve({ tool: "PostgreSQL", version: null });
-        }, 2500);
+          });
+        } else {
+          // 'N' = no SSL, proceed with plain connection
+          const version = await sendStartupAndCollect(socket);
+          resolve({ tool: "PostgreSQL", version });
+        }
       });
     });
+
     socket.once("error", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
     socket.once("timeout", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
     socket.connect(port, host);
