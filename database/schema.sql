@@ -128,3 +128,23 @@ CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_id ON tool_versions(tool_id);
 
 CREATE OR REPLACE TRIGGER tool_versions_updated_at BEFORE UPDATE ON tool_versions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Branding settings (singleton row)
+CREATE TABLE IF NOT EXISTS branding_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  app_name TEXT NOT NULL DEFAULT 'SecVersions',
+  app_subtitle TEXT NOT NULL DEFAULT 'Monitoramento de versões e vulnerabilidades',
+  logo_url TEXT,
+  primary_color TEXT NOT NULL DEFAULT '160 100% 45%',
+  accent_color TEXT NOT NULL DEFAULT '190 90% 50%',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE TRIGGER branding_settings_updated_at BEFORE UPDATE ON branding_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Insert default branding if empty
+INSERT INTO branding_settings (app_name, app_subtitle, primary_color, accent_color)
+SELECT 'SecVersions', 'Monitoramento de versões e vulnerabilidades', '160 100% 45%', '190 90% 50%'
+WHERE NOT EXISTS (SELECT 1 FROM branding_settings);
