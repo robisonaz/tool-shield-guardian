@@ -263,8 +263,8 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
             <div className="flex items-center gap-2">
               {tool.name}
               {tool.source_url && (
-                <span title={`URL: ${tool.source_url}`}>
-                  <Globe className="h-3 w-3 text-primary/60" />
+                <span title={`Descoberto via Discovery: ${tool.source_url}`}>
+                  <Radar className="h-3.5 w-3.5 text-accent" />
                 </span>
               )}
               {tool.sub_versions && tool.sub_versions.length > 0 && (
