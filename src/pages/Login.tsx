@@ -22,7 +22,7 @@ function LoginHeader() {
         </div>
       )}
       <h1 className="text-2xl font-sans font-bold text-foreground">{branding.app_name}</h1>
-      <p className="text-sm text-muted-foreground mt-1">Entrar na plataforma</p>
+      <p className="text-sm text-muted-foreground mt-1">{branding.app_subtitle}</p>
     </div>
   );
 }
