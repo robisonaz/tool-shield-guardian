@@ -22,7 +22,6 @@ const COMMON_PORTS: Record<number, string> = {
   9100: "Node Exporter",
   9200: "Elasticsearch",
   9443: "HTTPS-Alt",
-  10050: "Zabbix Agent",
   10051: "Zabbix Server",
   27017: "MongoDB",
 };
