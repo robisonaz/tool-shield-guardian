@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { discoveryScan, type DiscoveryResult } from "@/lib/api-client";
-import { addTool } from "@/lib/tools-data";
+import { addTool, getTools, addSubVersionToTool } from "@/lib/tools-data";
 
 const Discovery = () => {
   const navigate = useNavigate();
