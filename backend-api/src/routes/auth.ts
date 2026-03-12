@@ -265,8 +265,8 @@ router.delete("/users/:userId", requireAuth, async (req, res) => {
 
   try {
     await pool.query("DELETE FROM user_roles WHERE user_id = $1", [userId]);
-    await pool.query("DELETE FROM profiles WHERE id = $1", [userId]);
     await pool.query("DELETE FROM refresh_tokens WHERE user_id = $1", [userId]);
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
     res.json({ ok: true });
   } catch (err: any) {
