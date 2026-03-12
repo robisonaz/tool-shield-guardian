@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import passport from "./config/passport.js";
-import { ensureToolVersionsSchema } from "./config/database.js";
+import { ensureSchema } from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import providersRoutes from "./routes/providers.js";
 import oidcRoutes from "./routes/oidc.js";
