@@ -15,10 +15,8 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, anonKey);
 
-    const { data, error } = await supabase
-      .from("oidc_providers")
-      .select("id, display_name, name, issuer_url, client_id, scopes")
-      .eq("enabled", true);
+    // Use the secure function that excludes client_secret
+    const { data, error } = await supabase.rpc("get_public_providers");
 
     if (error) throw error;
 

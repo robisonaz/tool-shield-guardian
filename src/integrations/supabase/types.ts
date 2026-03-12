@@ -243,6 +243,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_providers: {
+        Args: never
+        Returns: {
+          client_id: string
+          display_name: string
+          id: string
+          issuer_url: string
+          name: string
+          scopes: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
