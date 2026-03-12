@@ -24,6 +24,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   apache: { vendor: "apache", product: "http_server" },
   nodejs: { vendor: "nodejs", product: "node.js" },
   python: { vendor: "python", product: "python" },
+  openssh: { vendor: "openbsd", product: "openssh" },
   openssl: { vendor: "openssl", product: "openssl" },
   postgresql: { vendor: "postgresql", product: "postgresql" },
   mysql: { vendor: "oracle", product: "mysql" },

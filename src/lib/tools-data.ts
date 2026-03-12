@@ -42,7 +42,7 @@ export interface CVEEntry {
 
 const SUPPORTED_TOOLS = [
   "gitlab", "jenkins", "kubernetes", "nginx", "docker", "terraform",
-  "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
+  "sonarqube", "apache", "nodejs", "python", "openssl", "openssh", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
   "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver", "foreman",
