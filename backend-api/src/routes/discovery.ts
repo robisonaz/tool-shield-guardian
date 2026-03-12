@@ -89,23 +89,109 @@ function parseCIDR(cidr: string): string[] {
   return ips;
 }
 
-// TCP connect scan with timeout
-function scanPort(host: string, port: number, timeoutMs = 1500): Promise<boolean> {
+// TCP connect scan with timeout — also grabs banner if available
+function scanPort(host: string, port: number, timeoutMs = 2000): Promise<{ open: boolean; banner: string }> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
+    let banner = "";
     socket.setTimeout(timeoutMs);
     socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
+      // For some protocols we need to wait for the server to send a banner
+      socket.once("data", (data) => {
+        banner = data.toString("utf8", 0, 512).trim();
+        socket.destroy();
+        resolve({ open: true, banner });
+      });
+      // If no data arrives within 1.5s, resolve without banner
+      setTimeout(() => {
+        socket.destroy();
+        resolve({ open: true, banner });
+      }, 1500);
     });
     socket.once("timeout", () => {
       socket.destroy();
-      resolve(false);
+      resolve({ open: false, banner: "" });
     });
     socket.once("error", () => {
       socket.destroy();
-      resolve(false);
+      resolve({ open: false, banner: "" });
     });
+    socket.connect(port, host);
+  });
+}
+
+// Parse version from TCP banner for known services
+function parseTcpBanner(port: number, banner: string): { tool: string | null; version: string | null } {
+  // SSH: "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
+  const sshMatch = banner.match(/SSH-[\d.]+-(OpenSSH[_\s]?([\d.]+[p\d]*))/i);
+  if (sshMatch) return { tool: "OpenSSH", version: sshMatch[2] || null };
+  if (/^SSH-/i.test(banner)) {
+    const v = banner.match(/SSH-[\d.]+-(.+)/);
+    return { tool: "SSH", version: v?.[1]?.trim() || null };
+  }
+
+  // MySQL / MariaDB: version string in greeting packet
+  // The greeting packet contains the version as a null-terminated string starting at byte 5
+  const mysqlMatch = banner.match(/([\d]+\.[\d]+\.[\d]+[-\w]*)/);
+  if (port === 3306 && mysqlMatch) {
+    const isMariaDB = /mariadb/i.test(banner);
+    return { tool: isMariaDB ? "MariaDB" : "MySQL", version: mysqlMatch[1] };
+  }
+
+  // PostgreSQL: after connection the server may not send a banner without SSL negotiation
+  // But if we get something, try to parse it
+  if (port === 5432 && banner.length > 0) {
+    const pgMatch = banner.match(/PostgreSQL\s+([\d.]+)/i);
+    return { tool: "PostgreSQL", version: pgMatch?.[1] || null };
+  }
+
+  // Zabbix Agent: responds to "agent.version" but also may have a banner
+  if ((port === 10050 || port === 10051) && banner.length > 0) {
+    const zbxMatch = banner.match(/([\d]+\.[\d]+\.[\d]+)/);
+    return { tool: port === 10050 ? "Zabbix Agent" : "Zabbix Server", version: zbxMatch?.[1] || null };
+  }
+
+  // Redis: "+PONG" or redis_version in INFO
+  if (port === 6379) {
+    const redisMatch = banner.match(/redis_version:([\d.]+)/i);
+    if (redisMatch) return { tool: "Redis", version: redisMatch[1] };
+    if (banner.includes("DENIED") || banner.includes("+")) return { tool: "Redis", version: null };
+  }
+
+  // MongoDB
+  if (port === 27017 && banner.length > 0) {
+    return { tool: "MongoDB", version: null };
+  }
+
+  return { tool: null, version: null };
+}
+
+// For Zabbix Agent, send a command to get version
+async function probeZabbixAgent(host: string, port: number): Promise<{ tool: string; version: string | null }> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(3000);
+    socket.once("connect", () => {
+      // Zabbix passive agent protocol: send "agent.version\n"
+      const key = "agent.version";
+      // Zabbix protocol header: ZBXD\x01 + 8-byte data length (little-endian) + data
+      const data = Buffer.from(key);
+      const header = Buffer.alloc(13);
+      header.write("ZBXD\x01");
+      header.writeUInt32LE(data.length, 5);
+      header.writeUInt32LE(0, 9);
+      socket.write(Buffer.concat([header, data]));
+
+      socket.once("data", (response) => {
+        const str = response.toString("utf8").replace(/ZBXD\x01.{8}/s, "").trim();
+        const vMatch = str.match(/([\d]+\.[\d]+\.[\d]+)/);
+        socket.destroy();
+        resolve({ tool: port === 10050 ? "Zabbix Agent" : "Zabbix Server", version: vMatch?.[1] || str || null });
+      });
+      setTimeout(() => { socket.destroy(); resolve({ tool: "Zabbix Agent", version: null }); }, 2500);
+    });
+    socket.once("error", () => { socket.destroy(); resolve({ tool: "Zabbix Agent", version: null }); });
+    socket.once("timeout", () => { socket.destroy(); resolve({ tool: "Zabbix Agent", version: null }); });
     socket.connect(port, host);
   });
 }
@@ -243,24 +329,42 @@ router.post("/scan", requireAuth, async (req, res) => {
       const batch = allTasks.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(async ({ ip, port }) => {
-          const open = await scanPort(ip, port);
+          const { open, banner: tcpBanner } = await scanPort(ip, port);
           if (!open) return null;
 
           // Try HTTP fingerprinting for HTTP-like ports
           const httpPorts = [80, 443, 3000, 5601, 8080, 8443, 8888, 9090, 9200, 9443];
-          let fp = { tool: null as string | null, version: null as string | null, banner: COMMON_PORTS[port] || "Unknown" };
+
+          let tool: string | null = null;
+          let version: string | null = null;
+          let banner = COMMON_PORTS[port] || "Unknown";
 
           if (httpPorts.includes(port)) {
-            fp = await fingerprint(ip, port);
+            const fp = await fingerprint(ip, port);
+            tool = fp.tool;
+            version = fp.version;
+            banner = fp.banner;
+          } else if ([10050, 10051].includes(port)) {
+            // Special probe for Zabbix Agent/Server
+            const zbx = await probeZabbixAgent(ip, port);
+            tool = zbx.tool;
+            version = zbx.version;
+            banner = tcpBanner || `${zbx.tool} detected`;
+          } else if (tcpBanner) {
+            // Parse TCP banner for SSH, MySQL, PostgreSQL, Redis, etc.
+            const parsed = parseTcpBanner(port, tcpBanner);
+            tool = parsed.tool;
+            version = parsed.version;
+            banner = tcpBanner.substring(0, 200);
           }
 
           return {
             ip,
             port,
             service: COMMON_PORTS[port] || "Unknown",
-            tool: fp.tool,
-            version: fp.version,
-            banner: fp.banner,
+            tool,
+            version,
+            banner,
           } as ScanResult;
         })
       );
