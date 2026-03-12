@@ -240,7 +240,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      oidc_providers_public: {
+        Row: {
+          client_id: string | null
+          display_name: string | null
+          enabled: boolean | null
+          id: string | null
+          issuer_url: string | null
+          name: string | null
+          scopes: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          display_name?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          issuer_url?: string | null
+          name?: string | null
+          scopes?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          display_name?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          issuer_url?: string | null
+          name?: string | null
+          scopes?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
