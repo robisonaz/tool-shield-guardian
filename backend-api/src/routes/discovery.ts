@@ -329,24 +329,42 @@ router.post("/scan", requireAuth, async (req, res) => {
       const batch = allTasks.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(async ({ ip, port }) => {
-          const open = await scanPort(ip, port);
+          const { open, banner: tcpBanner } = await scanPort(ip, port);
           if (!open) return null;
 
           // Try HTTP fingerprinting for HTTP-like ports
           const httpPorts = [80, 443, 3000, 5601, 8080, 8443, 8888, 9090, 9200, 9443];
-          let fp = { tool: null as string | null, version: null as string | null, banner: COMMON_PORTS[port] || "Unknown" };
+
+          let tool: string | null = null;
+          let version: string | null = null;
+          let banner = COMMON_PORTS[port] || "Unknown";
 
           if (httpPorts.includes(port)) {
-            fp = await fingerprint(ip, port);
+            const fp = await fingerprint(ip, port);
+            tool = fp.tool;
+            version = fp.version;
+            banner = fp.banner;
+          } else if ([10050, 10051].includes(port)) {
+            // Special probe for Zabbix Agent/Server
+            const zbx = await probeZabbixAgent(ip, port);
+            tool = zbx.tool;
+            version = zbx.version;
+            banner = tcpBanner || `${zbx.tool} detected`;
+          } else if (tcpBanner) {
+            // Parse TCP banner for SSH, MySQL, PostgreSQL, Redis, etc.
+            const parsed = parseTcpBanner(port, tcpBanner);
+            tool = parsed.tool;
+            version = parsed.version;
+            banner = tcpBanner.substring(0, 200);
           }
 
           return {
             ip,
             port,
             service: COMMON_PORTS[port] || "Unknown",
-            tool: fp.tool,
-            version: fp.version,
-            banner: fp.banner,
+            tool,
+            version,
+            banner,
           } as ScanResult;
         })
       );
