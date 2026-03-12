@@ -10,7 +10,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
-
+import Discovery from "./pages/Discovery";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +30,7 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/discovery" element={<ProtectedRoute><Discovery /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrandingProvider>

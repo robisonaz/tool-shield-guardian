@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
+import { ShieldCheck, RefreshCw, Settings, LogOut, Plus, Radar } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { AddToolForm } from "@/components/AddToolForm";
@@ -152,6 +152,15 @@ const Index = () => {
             >
               <Plus className="h-4 w-4 mr-1.5" />
               Cadastrar Ferramenta
+            </Button>
+            <Button
+              onClick={() => navigate("/discovery")}
+              size="sm"
+              variant="outline"
+              className="border-accent/30 text-accent hover:bg-accent/10"
+            >
+              <Radar className="h-4 w-4 mr-1.5" />
+              Discovery
             </Button>
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
             <span className="text-xs text-muted-foreground">{user?.email}</span>
