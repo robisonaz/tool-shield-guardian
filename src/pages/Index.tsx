@@ -161,6 +161,7 @@ const Index = () => {
             >
               <Radar className="h-4 w-4 mr-1.5" />
               Discovery
+            </Button>
             <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} title="Configurações">
