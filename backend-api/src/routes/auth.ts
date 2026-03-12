@@ -124,26 +124,6 @@ router.put("/profile", requireAuth, async (req, res) => {
       values
     );
 
-    // Also update profiles table
-    const profileFields: string[] = [];
-    const profileValues: any[] = [];
-    let pidx = 1;
-    if (full_name !== undefined) {
-      profileFields.push(`full_name = $${pidx++}`);
-      profileValues.push(full_name);
-    }
-    if (email !== undefined) {
-      profileFields.push(`email = $${pidx++}`);
-      profileValues.push(email);
-    }
-    if (profileFields.length > 0) {
-      profileValues.push(user.id);
-      await pool.query(
-        `UPDATE profiles SET ${profileFields.join(", ")}, updated_at = now() WHERE id = $${pidx}`,
-        profileValues
-      );
-    }
-
     const { rows } = await pool.query("SELECT id, email, full_name FROM users WHERE id = $1", [user.id]);
     res.json({ user: rows[0] });
   } catch (err: any) {
