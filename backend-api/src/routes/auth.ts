@@ -124,26 +124,6 @@ router.put("/profile", requireAuth, async (req, res) => {
       values
     );
 
-    // Also update profiles table
-    const profileFields: string[] = [];
-    const profileValues: any[] = [];
-    let pidx = 1;
-    if (full_name !== undefined) {
-      profileFields.push(`full_name = $${pidx++}`);
-      profileValues.push(full_name);
-    }
-    if (email !== undefined) {
-      profileFields.push(`email = $${pidx++}`);
-      profileValues.push(email);
-    }
-    if (profileFields.length > 0) {
-      profileValues.push(user.id);
-      await pool.query(
-        `UPDATE profiles SET ${profileFields.join(", ")}, updated_at = now() WHERE id = $${pidx}`,
-        profileValues
-      );
-    }
-
     const { rows } = await pool.query("SELECT id, email, full_name FROM users WHERE id = $1", [user.id]);
     res.json({ user: rows[0] });
   } catch (err: any) {
@@ -223,12 +203,6 @@ router.post("/users", requireAuth, async (req, res) => {
     );
     const newUser = rows[0];
 
-    // Create profile
-    await pool.query(
-      "INSERT INTO profiles (id, email, full_name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
-      [newUser.id, email, full_name || ""]
-    );
-
     // Assign role
     if (role && role !== "user") {
       await pool.query(
@@ -291,8 +265,8 @@ router.delete("/users/:userId", requireAuth, async (req, res) => {
 
   try {
     await pool.query("DELETE FROM user_roles WHERE user_id = $1", [userId]);
-    await pool.query("DELETE FROM profiles WHERE id = $1", [userId]);
     await pool.query("DELETE FROM refresh_tokens WHERE user_id = $1", [userId]);
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
     res.json({ ok: true });
   } catch (err: any) {
