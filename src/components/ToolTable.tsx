@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Plus, Loader2, Layers } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Radar, Plus, Loader2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -263,8 +263,8 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
             <div className="flex items-center gap-2">
               {tool.name}
               {tool.source_url && (
-                <span title={`URL: ${tool.source_url}`}>
-                  <Globe className="h-3 w-3 text-primary/60" />
+                <span title={`Descoberto via Discovery: ${tool.source_url}`}>
+                  <Radar className="h-3.5 w-3.5 text-accent" />
                 </span>
               )}
               {tool.sub_versions && tool.sub_versions.length > 0 && (

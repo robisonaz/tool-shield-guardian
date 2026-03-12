@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { discoveryScan, type DiscoveryResult } from "@/lib/api-client";
-import { addTool } from "@/lib/tools-data";
+import { addTool, getTools, addSubVersionToTool } from "@/lib/tools-data";
 
 const Discovery = () => {
   const navigate = useNavigate();
@@ -71,24 +71,57 @@ const Discovery = () => {
     }
 
     setRegistering(true);
-    let count = 0;
+    let countNew = 0;
+    let countSub = 0;
+
+    // Load existing tools to check for duplicates
+    const existingTools = await getTools();
 
     for (const idx of selected) {
       const r = results[idx];
       if (!r.tool) continue;
 
+      const toolNameLower = r.tool.toLowerCase().trim();
+      const version = r.version || "unknown";
+      const sourceUrl = `http://${r.ip}:${r.port}`;
+
       try {
-        const sourceUrl = `http://${r.ip}:${r.port}`;
-        await addTool(r.tool, r.version || "unknown", sourceUrl);
-        count++;
+        // Find existing tool with same name (case-insensitive)
+        const existing = existingTools.find(
+          (t) => t.name.toLowerCase().trim() === toolNameLower
+        );
+
+        if (existing) {
+          // Check if this exact version already exists (main or sub)
+          const mainVersionMatch = existing.version === version;
+          const subVersionMatch = existing.sub_versions?.some(
+            (sv) => sv.version === version
+          );
+
+          if (mainVersionMatch || subVersionMatch) {
+            // Already registered, skip
+            continue;
+          }
+
+          // Add as sub-version
+          await addSubVersionToTool(existing.id, existing.name, version);
+          countSub++;
+        } else {
+          // Create new tool
+          await addTool(r.tool, version, sourceUrl);
+          countNew++;
+        }
       } catch (err) {
         console.error(`Erro ao cadastrar ${r.tool}:`, err);
       }
     }
 
     setRegistering(false);
-    if (count > 0) {
-      toast.success(`${count} ferramenta(s) cadastrada(s)!`);
+    const messages: string[] = [];
+    if (countNew > 0) messages.push(`${countNew} nova(s)`);
+    if (countSub > 0) messages.push(`${countSub} sub-versão(ões)`);
+    if (messages.length > 0) {
+      toast.success(`Cadastradas: ${messages.join(", ")}!`);
     }
   };
 
