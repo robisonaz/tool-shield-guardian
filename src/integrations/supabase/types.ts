@@ -240,38 +240,20 @@ export type Database = {
       }
     }
     Views: {
-      oidc_providers_public: {
-        Row: {
-          client_id: string | null
-          display_name: string | null
-          enabled: boolean | null
-          id: string | null
-          issuer_url: string | null
-          name: string | null
-          scopes: string | null
-        }
-        Insert: {
-          client_id?: string | null
-          display_name?: string | null
-          enabled?: boolean | null
-          id?: string | null
-          issuer_url?: string | null
-          name?: string | null
-          scopes?: string | null
-        }
-        Update: {
-          client_id?: string | null
-          display_name?: string | null
-          enabled?: boolean | null
-          id?: string | null
-          issuer_url?: string | null
-          name?: string | null
-          scopes?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_public_providers: {
+        Args: never
+        Returns: {
+          client_id: string
+          display_name: string
+          id: string
+          issuer_url: string
+          name: string
+          scopes: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
