@@ -35,7 +35,7 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 async function startServer() {
   try {
-    await ensureToolVersionsSchema();
+    await ensureSchema();
     app.listen(PORT, () => {
       console.log(`SecVersions API running on port ${PORT}`);
     });
