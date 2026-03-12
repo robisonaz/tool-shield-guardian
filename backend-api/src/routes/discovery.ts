@@ -196,6 +196,72 @@ async function probeZabbixAgent(host: string, port: number): Promise<{ tool: str
   });
 }
 
+// PostgreSQL doesn't send a banner — we must send a StartupMessage to get the version
+async function probePostgreSQL(host: string, port: number): Promise<{ tool: string; version: string | null }> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(3000);
+    socket.once("connect", () => {
+      // Send SSLRequest first (int32 length=8, int32 code=80877103)
+      // Server responds with 'S' (supports SSL) or 'N' (no SSL)
+      const sslReq = Buffer.alloc(8);
+      sslReq.writeInt32BE(8, 0);
+      sslReq.writeInt32BE(80877103, 4);
+      socket.write(sslReq);
+
+      socket.once("data", (sslResponse) => {
+        // After SSL response, send a StartupMessage with protocol 3.0
+        // StartupMessage: int32 length, int32 protocol(196608 = 3.0), "user\0postgres\0database\0postgres\0\0"
+        const params = "user\0postgres\0database\0postgres\0\0";
+        const paramsBuffer = Buffer.from(params, "utf8");
+        const startupLen = 4 + 4 + paramsBuffer.length;
+        const startup = Buffer.alloc(startupLen);
+        startup.writeInt32BE(startupLen, 0);
+        startup.writeInt32BE(196608, 4); // protocol 3.0
+        paramsBuffer.copy(startup, 8);
+        socket.write(startup);
+
+        let collected = Buffer.alloc(0);
+        const onData = (chunk: Buffer) => {
+          collected = Buffer.concat([collected, chunk]);
+          const str = collected.toString("utf8");
+          // Look for server_version in the parameter status messages
+          const vMatch = str.match(/server_version\0([\d.]+)/);
+          if (vMatch) {
+            socket.removeListener("data", onData);
+            socket.destroy();
+            resolve({ tool: "PostgreSQL", version: vMatch[1] });
+            return;
+          }
+          // Also check for ErrorResponse which contains version info sometimes
+          const errMatch = str.match(/PostgreSQL\s+([\d.]+)/i);
+          if (errMatch) {
+            socket.removeListener("data", onData);
+            socket.destroy();
+            resolve({ tool: "PostgreSQL", version: errMatch[1] });
+            return;
+          }
+          // If we got auth request or error, we know it's PostgreSQL
+          if (collected.length > 100) {
+            socket.removeListener("data", onData);
+            socket.destroy();
+            resolve({ tool: "PostgreSQL", version: null });
+          }
+        };
+        socket.on("data", onData);
+        setTimeout(() => {
+          socket.removeAllListeners("data");
+          socket.destroy();
+          resolve({ tool: "PostgreSQL", version: null });
+        }, 2500);
+      });
+    });
+    socket.once("error", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
+    socket.once("timeout", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
+    socket.connect(port, host);
+  });
+}
+
 // Try to fingerprint an HTTP(S) service
 async function fingerprint(host: string, port: number): Promise<{ tool: string | null; version: string | null; banner: string }> {
   const isHttps = [443, 8443, 9443].includes(port);
