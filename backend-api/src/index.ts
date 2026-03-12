@@ -9,6 +9,7 @@ import providersRoutes from "./routes/providers.js";
 import oidcRoutes from "./routes/oidc.js";
 import toolsRoutes from "./routes/tools.js";
 import brandingRoutes from "./routes/branding.js";
+import discoveryRoutes from "./routes/discovery.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3010");
