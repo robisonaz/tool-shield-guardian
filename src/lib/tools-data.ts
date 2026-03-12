@@ -42,7 +42,7 @@ export interface CVEEntry {
 
 const SUPPORTED_TOOLS = [
   "gitlab", "jenkins", "kubernetes", "nginx", "docker", "terraform",
-  "sonarqube", "apache", "nodejs", "python", "openssl", "postgresql",
+  "sonarqube", "apache", "nodejs", "python", "openssl", "openssh", "postgresql",
   "mysql", "redis", "elasticsearch", "mongodb", "grafana", "prometheus",
   "tomcat", "rabbitmq", "vault", "consul", "ansible", "php", "ruby", "go", "java", "dotnet",
   "zabbix server", "zabbix agent", "zabbix proxy", "keycloak", "jumpserver", "foreman",
@@ -69,6 +69,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
   postgresql: "postgresql", mysql: "mysql", redis: "redis", elasticsearch: "elasticsearch",
   mongodb: "mongodb", grafana: "grafana", prometheus: "prometheus", tomcat: "apache-tomcat",
   rabbitmq: "rabbitmq", vault: "hashicorp-vault", consul: "hashicorp-consul",
+  openssh: "openssh",
   ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
