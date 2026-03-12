@@ -416,8 +416,14 @@ router.post("/scan", requireAuth, async (req, res) => {
             tool = zbx.tool;
             version = zbx.version;
             banner = tcpBanner || `${zbx.tool} detected`;
+          } else if (port === 5432) {
+            // PostgreSQL requires a startup handshake to reveal version
+            const pg = await probePostgreSQL(ip, port);
+            tool = pg.tool;
+            version = pg.version;
+            banner = tcpBanner || `PostgreSQL${pg.version ? ' ' + pg.version : ''} detected`;
           } else if (tcpBanner) {
-            // Parse TCP banner for SSH, MySQL, PostgreSQL, Redis, etc.
+            // Parse TCP banner for SSH, MySQL, Redis, etc.
             const parsed = parseTcpBanner(port, tcpBanner);
             tool = parsed.tool;
             version = parsed.version;
