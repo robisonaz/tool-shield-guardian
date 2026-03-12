@@ -3,7 +3,7 @@ import { Palette, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getBrandingClient } from "@/lib/branding-client";
+import { saveBranding, uploadLogo } from "@/lib/api-client";
 import { useBranding, type BrandingSettings as BrandingType } from "@/hooks/useBranding";
 import { toast } from "sonner";
 
@@ -32,34 +32,15 @@ export function BrandingSettingsSection() {
       return;
     }
 
-    const client = getBrandingClient();
-    if (!client) {
-      toast.error("Backend indisponível para upload de logo.");
-      return;
-    }
-
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `logo.${ext}`;
-
-      const { error: uploadError } = await client.storage
-        .from("branding")
-        .upload(path, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = client.storage
-        .from("branding")
-        .getPublicUrl(path);
-
-      const logoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      setForm({ ...form, logo_url: logoUrl });
-      setPreviewLogo(logoUrl);
+      const result = await uploadLogo(file);
+      setForm({ ...form, logo_url: result.logo_url });
+      setPreviewLogo(result.logo_url);
       toast.success("Logo carregado!");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao fazer upload do logo.");
+      toast.error(err.message || "Erro ao fazer upload do logo.");
     } finally {
       setUploading(false);
     }
@@ -71,33 +52,20 @@ export function BrandingSettingsSection() {
   };
 
   const handleSave = async () => {
-    const client = getBrandingClient();
-    if (!client) {
-      toast.error("Backend indisponível para salvar branding.");
-      return;
-    }
-
     setSaving(true);
     try {
-      const { error } = await client
-        .from("branding_settings")
-        .update({
-          app_name: form.app_name,
-          app_subtitle: form.app_subtitle,
-          logo_url: form.logo_url,
-          primary_color: form.primary_color,
-          accent_color: form.accent_color,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", branding.id);
-
-      if (error) throw error;
-
+      await saveBranding({
+        app_name: form.app_name,
+        app_subtitle: form.app_subtitle,
+        logo_url: form.logo_url,
+        primary_color: form.primary_color,
+        accent_color: form.accent_color,
+      });
       await reload();
       toast.success("Branding salvo com sucesso!");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao salvar branding.");
+      toast.error(err.message || "Erro ao salvar branding.");
     } finally {
       setSaving(false);
     }
@@ -105,7 +73,6 @@ export function BrandingSettingsSection() {
 
   const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
     setForm({ ...form, primary_color: preset.primary, accent_color: preset.accent });
-    // Live preview
     document.documentElement.style.setProperty("--primary", preset.primary);
     document.documentElement.style.setProperty("--accent", preset.accent);
     document.documentElement.style.setProperty("--ring", preset.primary);
@@ -119,7 +86,6 @@ export function BrandingSettingsSection() {
       </div>
 
       <div className="bg-card border border-border rounded-lg p-5 space-y-5">
-        {/* App Name & Subtitle */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Nome da aplicação</Label>
@@ -139,7 +105,6 @@ export function BrandingSettingsSection() {
           </div>
         </div>
 
-        {/* Logo */}
         <div className="space-y-2">
           <Label>Logo</Label>
           <div className="flex items-center gap-4">
@@ -184,7 +149,6 @@ export function BrandingSettingsSection() {
           </div>
         </div>
 
-        {/* Color Presets */}
         <div className="space-y-2">
           <Label>Tema de cores</Label>
           <div className="flex flex-wrap gap-2">
@@ -208,7 +172,6 @@ export function BrandingSettingsSection() {
           </div>
         </div>
 
-        {/* Custom Colors */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Cor primária (HSL)</Label>
@@ -240,7 +203,6 @@ export function BrandingSettingsSection() {
           </div>
         </div>
 
-        {/* Preview */}
         <div className="bg-background border border-border rounded-lg p-4">
           <p className="text-xs text-muted-foreground mb-2">Pré-visualização</p>
           <div className="flex items-center gap-3">

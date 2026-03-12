@@ -1,12 +1,14 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
 import passport from "./config/passport.js";
 import { ensureToolVersionsSchema } from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import providersRoutes from "./routes/providers.js";
 import oidcRoutes from "./routes/oidc.js";
 import toolsRoutes from "./routes/tools.js";
+import brandingRoutes from "./routes/branding.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3010");
@@ -18,11 +20,15 @@ app.use(cors({
 app.use(express.json());
 app.use(passport.initialize());
 
+// Serve uploaded files
+app.use("/uploads", express.static(path.resolve("uploads")));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/providers", providersRoutes);
 app.use("/api/oidc", oidcRoutes);
 app.use("/api/tools", toolsRoutes);
+app.use("/api/branding", brandingRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
