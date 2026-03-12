@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, RefreshCw, Settings, LogOut, Plus } from "lucide-react";
+import { ShieldCheck, RefreshCw, Settings, LogOut, Plus, Radar } from "lucide-react";
 import { ToolTable } from "@/components/ToolTable";
 import { DashboardStats } from "@/components/DashboardStats";
 import { AddToolForm } from "@/components/AddToolForm";
