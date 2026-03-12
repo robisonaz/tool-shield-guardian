@@ -30,6 +30,7 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/discovery" element={<ProtectedRoute><Discovery /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrandingProvider>

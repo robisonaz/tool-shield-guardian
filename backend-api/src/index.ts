@@ -30,6 +30,7 @@ app.use("/api/providers", providersRoutes);
 app.use("/api/oidc", oidcRoutes);
 app.use("/api/tools", toolsRoutes);
 app.use("/api/branding", brandingRoutes);
+app.use("/api/discovery", discoveryRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));

@@ -285,4 +285,25 @@ export async function uploadLogo(file: File): Promise<{ logo_url: string }> {
   return res.json();
 }
 
+// Discovery
+export interface DiscoveryResult {
+  ip: string;
+  port: number;
+  service: string;
+  tool: string | null;
+  version: string | null;
+  banner: string;
+}
+
+export async function discoveryScan(cidr: string, ports?: number[]) {
+  return apiFetch<{
+    total_hosts: number;
+    total_ports_scanned: number;
+    results: DiscoveryResult[];
+  }>("/discovery/scan", {
+    method: "POST",
+    body: JSON.stringify({ cidr, ports }),
+  });
+}
+
 export { getTokens, setTokens, clearTokens };
