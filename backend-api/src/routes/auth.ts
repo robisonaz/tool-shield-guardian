@@ -203,12 +203,6 @@ router.post("/users", requireAuth, async (req, res) => {
     );
     const newUser = rows[0];
 
-    // Create profile
-    await pool.query(
-      "INSERT INTO profiles (id, email, full_name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
-      [newUser.id, email, full_name || ""]
-    );
-
     // Assign role
     if (role && role !== "user") {
       await pool.query(
