@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getBrandingClient } from "@/lib/branding-client";
+import { getBranding } from "@/lib/api-client";
 
 export interface BrandingSettings {
   id: string;
@@ -38,8 +38,6 @@ function applyColors(primary: string, accent: string) {
   root.style.setProperty("--sidebar-primary", primary);
   root.style.setProperty("--sidebar-ring", primary);
   root.style.setProperty("--accent", accent);
-
-  // Update glow variables
   root.style.setProperty("--glow-primary", `0 0 20px hsl(${primary} / 0.3)`);
   root.style.setProperty("--glow-accent", `0 0 20px hsl(${accent} / 0.3)`);
 }
@@ -49,20 +47,9 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const reload = async () => {
-    const client = getBrandingClient();
-    if (!client) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await client
-        .from("branding_settings")
-        .select("*")
-        .limit(1)
-        .single();
-
-      if (!error && data) {
+      const data = await getBranding();
+      if (data) {
         const b: BrandingSettings = {
           id: data.id,
           app_name: data.app_name,
@@ -95,4 +82,3 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 export function useBranding() {
   return useContext(BrandingContext);
 }
-

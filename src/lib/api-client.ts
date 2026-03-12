@@ -248,4 +248,41 @@ export async function deleteUser(userId: string) {
   return apiFetch(`/auth/users/${userId}`, { method: "DELETE" });
 }
 
+// Branding
+export async function getBranding() {
+  return apiFetch<any>("/branding");
+}
+
+export async function saveBranding(data: {
+  app_name: string;
+  app_subtitle: string;
+  logo_url: string | null;
+  primary_color: string;
+  accent_color: string;
+}) {
+  return apiFetch<any>("/branding", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function uploadLogo(file: File): Promise<{ logo_url: string }> {
+  const url = `${API_BASE}/branding/logo`;
+  const tokens = getTokens();
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  const headers: Record<string, string> = {};
+  if (tokens?.accessToken) {
+    headers["Authorization"] = `Bearer ${tokens.accessToken}`;
+  }
+
+  const res = await fetch(url, { method: "POST", headers, body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Erro de rede" }));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export { getTokens, setTokens, clearTokens };
