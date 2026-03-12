@@ -262,11 +262,17 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
           ) : (
             <div className="flex items-center gap-2">
               {tool.name}
-              {tool.source_url && (
-                <span title={`Descoberto via Discovery: ${tool.source_url}`}>
-                  <Radar className="h-3.5 w-3.5 text-accent" />
-                </span>
-              )}
+              {tool.source_url ? (
+                /^https?:\/\/\d+\.\d+\.\d+\.\d+:\d+\/?$/.test(tool.source_url) ? (
+                  <span title={`Descoberto via Discovery: ${tool.source_url}`}>
+                    <Radar className="h-3.5 w-3.5 text-accent" />
+                  </span>
+                ) : (
+                  <span title={`Monitorado via URL: ${tool.source_url}`}>
+                    <Globe className="h-3.5 w-3.5 text-primary" />
+                  </span>
+                )
+              ) : null}
               {tool.sub_versions && tool.sub_versions.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/20">
                   <Layers className="h-3 w-3" />
