@@ -69,6 +69,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
   postgresql: "postgresql", mysql: "mysql", redis: "redis", elasticsearch: "elasticsearch",
   mongodb: "mongodb", grafana: "grafana", prometheus: "prometheus", tomcat: "apache-tomcat",
   rabbitmq: "rabbitmq", vault: "hashicorp-vault", consul: "hashicorp-consul",
+  openssh: "openssh",
   ansible: "ansible-core", php: "php", ruby: "ruby", go: "go", java: "java", dotnet: "dotnet",
   "zabbix server": "zabbix", "zabbix agent": "zabbix", "zabbix proxy": "zabbix",
   zabbix: "zabbix",
