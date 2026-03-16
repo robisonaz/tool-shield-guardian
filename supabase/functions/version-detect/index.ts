@@ -94,6 +94,48 @@ function isPrivateOrReservedIP(ip: string): boolean {
   return false;
 }
 
+/**
+ * Check if a string looks like a raw IP address (IPv4 or IPv6).
+ */
+function isRawIP(hostname: string): boolean {
+  // IPv4: digits and dots
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return true;
+  // IPv4 decimal-encoded (e.g. 2130706433)
+  if (/^\d{8,10}$/.test(hostname)) return true;
+  // IPv4 octal (e.g. 0177.0.0.1)
+  if (/^0\d/.test(hostname) && /^[0-7.]+$/.test(hostname)) return true;
+  // IPv6 (contains colons, may be bracketed)
+  const bare = hostname.replace(/^\[|\]$/g, "");
+  if (bare.includes(":")) return true;
+  return false;
+}
+
+/**
+ * Expand IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1 to their IPv4 form,
+ * and normalize decimal-encoded IPv4.
+ */
+function normalizeIP(ip: string): string {
+  const bare = ip.replace(/^\[|\]$/g, "").toLowerCase();
+  // IPv4-mapped IPv6: ::ffff:a.b.c.d
+  const mapped = bare.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (mapped) return mapped[1];
+  return bare;
+}
+
+/**
+ * Convert a decimal-encoded IPv4 (e.g. 2130706433) to dotted form.
+ */
+function decimalToIPv4(dec: string): string | null {
+  const num = parseInt(dec, 10);
+  if (isNaN(num) || num < 0 || num > 0xFFFFFFFF) return null;
+  return [
+    (num >>> 24) & 0xFF,
+    (num >>> 16) & 0xFF,
+    (num >>> 8) & 0xFF,
+    num & 0xFF,
+  ].join(".");
+}
+
 async function validateUrl(urlStr: string): Promise<string> {
   const parsed = new URL(urlStr);
 
@@ -102,7 +144,7 @@ async function validateUrl(urlStr: string): Promise<string> {
     throw new Error("Only http and https protocols are allowed.");
   }
 
-  const hostname = parsed.hostname;
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
 
   // Block obvious localhost/metadata hostnames
   const blockedHostnames = [
@@ -114,20 +156,50 @@ async function validateUrl(urlStr: string): Promise<string> {
     throw new Error("Access to internal/metadata hosts is not allowed.");
   }
 
-  // Resolve hostname and check IP
+  // If hostname is a raw IP, validate it directly (no DNS needed)
+  if (isRawIP(hostname)) {
+    let ipToCheck = normalizeIP(hostname);
+
+    // Handle decimal-encoded IPv4 (e.g. 2130706433)
+    if (/^\d{8,10}$/.test(ipToCheck)) {
+      const converted = decimalToIPv4(ipToCheck);
+      if (converted) ipToCheck = converted;
+    }
+
+    if (isPrivateOrReservedIP(ipToCheck)) {
+      throw new Error("Access to private/internal IP addresses is not allowed.");
+    }
+    return urlStr;
+  }
+
+  // Resolve hostname and check IP — fail-closed on DNS errors
+  // Resolve both A (IPv4) and AAAA (IPv6) records
+  const allAddrs: string[] = [];
+
   try {
-    const addrs = await Deno.resolveDns(hostname, "A");
-    for (const addr of addrs) {
-      if (isPrivateOrReservedIP(addr)) {
-        throw new Error("Access to private/internal IP addresses is not allowed.");
-      }
+    const addrsV4 = await Deno.resolveDns(hostname, "A");
+    allAddrs.push(...addrsV4);
+  } catch {
+    // No A records or DNS failure
+  }
+
+  try {
+    const addrsV6 = await Deno.resolveDns(hostname, "AAAA");
+    allAddrs.push(...addrsV6);
+  } catch {
+    // No AAAA records or DNS failure
+  }
+
+  // Fail-closed: if we got zero records, reject
+  if (allAddrs.length === 0) {
+    throw new Error("Could not resolve hostname. Access denied.");
+  }
+
+  for (const addr of allAddrs) {
+    const normalized = normalizeIP(addr);
+    if (isPrivateOrReservedIP(normalized)) {
+      throw new Error("Access to private/internal IP addresses is not allowed.");
     }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("not allowed")) {
-      throw err;
-    }
-    // DNS resolution may fail for valid hosts in some environments; 
-    // allow the fetch to proceed but disable redirects as a safeguard
   }
 
   return urlStr;
