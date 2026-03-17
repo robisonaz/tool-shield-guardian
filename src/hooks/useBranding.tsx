@@ -60,6 +60,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         };
         setBranding(b);
         applyColors(b.primary_color, b.accent_color);
+        document.title = b.app_name;
       }
     } catch (err) {
       console.error("Failed to load branding:", err);
