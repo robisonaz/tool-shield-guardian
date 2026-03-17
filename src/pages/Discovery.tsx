@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, ArrowLeft, Search, Loader2, Plus, Check, Globe, Server } from "lucide-react";
+import { Radar, ArrowLeft, Search, Loader2, Plus, Check, Globe, Server, Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { discoveryScan, type DiscoveryResult } from "@/lib/api-client";
+import { discoveryScan, getDiscoveryHistory, type DiscoveryResult, type DiscoveryScanHistory } from "@/lib/api-client";
 import { addTool, getTools, addSubVersionToTool } from "@/lib/tools-data";
 
 const Discovery = () => {
@@ -19,6 +19,31 @@ const Discovery = () => {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [registering, setRegistering] = useState(false);
   const [scanInfo, setScanInfo] = useState<{ total_hosts: number; total_ports_scanned: number } | null>(null);
+  const [history, setHistory] = useState<DiscoveryScanHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const data = await getDiscoveryHistory();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const loadFromHistory = (scan: DiscoveryScanHistory) => {
+    setResults(scan.results);
+    setScanInfo({ total_hosts: scan.total_hosts, total_ports_scanned: scan.total_ports_scanned });
+    setCidr(scan.cidr);
+    setSelected(new Set());
+    toast.info(`Scan de ${scan.cidr} carregado do histórico`);
+  };
 
   const handleScan = async () => {
     if (!cidr.trim()) {
@@ -45,6 +70,7 @@ const Discovery = () => {
       toast.error(err.message || "Erro ao realizar scan");
     } finally {
       setScanning(false);
+      loadHistory();
     }
   };
 
@@ -324,6 +350,58 @@ const Discovery = () => {
             <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
             <p className="text-muted-foreground">Nenhuma porta aberta encontrada</p>
             <p className="text-xs text-muted-foreground mt-1">Verifique o range e tente novamente</p>
+          </motion.div>
+        )}
+
+        {/* Scan History */}
+        {!scanning && history.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  Últimos Scans
+                  <span className="text-xs text-muted-foreground font-normal">({history.length})</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {history.map((scan) => {
+                    const toolCount = scan.results.filter((r) => r.tool).length;
+                    const date = new Date(scan.created_at);
+                    const timeStr = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) + " " + date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                    return (
+                      <button
+                        key={scan.id}
+                        onClick={() => loadFromHistory(scan)}
+                        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors text-left group"
+                      >
+                        <div className="p-1.5 rounded bg-accent/10 border border-accent/20">
+                          <Radar className="h-3.5 w-3.5 text-accent" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm text-foreground">{scan.cidr}</span>
+                            <Badge variant="outline" className="text-xs font-normal">
+                              {scan.results.length} porta(s)
+                            </Badge>
+                            {toolCount > 0 && (
+                              <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-normal">
+                                {toolCount} serviço(s)
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {timeStr} • {scan.total_hosts} host(s)
+                          </span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </main>
