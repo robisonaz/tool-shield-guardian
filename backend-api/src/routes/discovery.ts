@@ -630,14 +630,51 @@ router.post("/scan", requireAuth, async (req, res) => {
 
     console.log(`[Discovery] Found ${results.length} open port(s)`);
 
-    res.json({
+    const scanData = {
       total_hosts: ips.length,
       total_ports_scanned: portsToScan.length,
       results,
-    });
+    };
+
+    // Save scan to history (keep only last 5 per user)
+    try {
+      const userId = (req as any).user?.id;
+      if (userId) {
+        await pool.query(
+          `INSERT INTO discovery_scans (user_id, cidr, total_hosts, total_ports_scanned, results) VALUES ($1, $2, $3, $4, $5)`,
+          [userId, cidr, ips.length, portsToScan.length, JSON.stringify(results)]
+        );
+        // Delete oldest scans keeping only 5
+        await pool.query(
+          `DELETE FROM discovery_scans WHERE user_id = $1 AND id NOT IN (
+            SELECT id FROM discovery_scans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5
+          )`,
+          [userId]
+        );
+      }
+    } catch (histErr) {
+      console.error("[Discovery] Failed to save scan history:", histErr);
+    }
+
+    res.json(scanData);
   } catch (err) {
     console.error("[Discovery] Error:", err);
     res.status(500).json({ error: "Erro interno no scan" });
+  }
+});
+
+// GET /api/discovery/history - last 5 scans
+router.get("/history", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { rows } = await pool.query(
+      `SELECT id, cidr, total_hosts, total_ports_scanned, results, created_at FROM discovery_scans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("[Discovery] History error:", err);
+    res.status(500).json({ error: "Erro ao buscar histórico" });
   }
 });
 

@@ -306,4 +306,17 @@ export async function discoveryScan(cidr: string, ports?: number[]) {
   });
 }
 
+export interface DiscoveryScanHistory {
+  id: string;
+  cidr: string;
+  total_hosts: number;
+  total_ports_scanned: number;
+  results: DiscoveryResult[];
+  created_at: string;
+}
+
+export async function getDiscoveryHistory() {
+  return apiFetch<DiscoveryScanHistory[]>("/discovery/history");
+}
+
 export { getTokens, setTokens, clearTokens };
