@@ -106,11 +106,19 @@ serve(async (req) => {
     const toolKey = toolName.toLowerCase().trim();
     const cpeEntry = CPE_MAP[toolKey];
     
+    // Normalize version for CPE lookup (e.g. strip OpenSSH portable suffix "p1")
+    let cpeVersion = version;
+    if (toolKey === "openssh" || toolKey === "openssl") {
+      // OpenSSH: "8.9p1" -> "8.9", "9.6p1" -> "9.6"
+      // OpenSSL: "3.0.2" stays "3.0.2" (no change needed, but strip letter suffixes like "1.1.1w" -> "1.1.1")
+      cpeVersion = version.replace(/p\d+$/i, "");
+    }
+
     let url: string;
     
     if (cpeEntry) {
       // Use virtualMatchString for version range matching (catches CVEs affecting this version)
-      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${version}`;
+      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${cpeVersion}`;
       url = `${NVD_API_BASE}?virtualMatchString=${encodeURIComponent(cpeMatch)}&resultsPerPage=50`;
       console.log(`Fetching NVD API (virtualMatchString): ${url}`);
     } else {
