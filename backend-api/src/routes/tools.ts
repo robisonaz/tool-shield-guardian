@@ -21,6 +21,7 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   apache: { vendor: "apache", product: "http_server" },
   nodejs: { vendor: "nodejs", product: "node.js" },
   python: { vendor: "python", product: "python" },
+  openssh: { vendor: "openbsd", product: "openssh" },
   openssl: { vendor: "openssl", product: "openssl" },
   postgresql: { vendor: "postgresql", product: "postgresql" },
   mysql: { vendor: "oracle", product: "mysql" },
@@ -46,6 +47,14 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   "puppet server": { vendor: "puppet", product: "puppet" },
   "puppet agent": { vendor: "puppet", product: "puppet" },
 };
+
+function normalizeVersionForNvd(toolKey: string, version: string) {
+  if (toolKey === "openssh") {
+    return version.replace(/p\d+$/i, "").trim();
+  }
+
+  return version.trim();
+}
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
   if (score >= 9.0) return "critical";
@@ -73,10 +82,11 @@ router.post("/nvd-lookup", requireAuth, async (req, res) => {
 
     const toolKey = toolName.toLowerCase().trim();
     const cpeEntry = CPE_MAP[toolKey];
+    const normalizedVersion = normalizeVersionForNvd(toolKey, version);
 
     let url: string;
     if (cpeEntry) {
-      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${version}`;
+      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${normalizedVersion}`;
       url = `${NVD_API_BASE}?virtualMatchString=${encodeURIComponent(cpeMatch)}&resultsPerPage=50`;
     } else {
       url = `${NVD_API_BASE}?keywordSearch=${encodeURIComponent(`${toolName} ${version}`)}&resultsPerPage=20`;
