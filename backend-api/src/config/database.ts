@@ -112,6 +112,20 @@ export async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_id ON tool_versions(tool_id);
   `);
 
+  // Discovery scans history
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS discovery_scans (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      cidr TEXT NOT NULL,
+      total_hosts INTEGER NOT NULL DEFAULT 0,
+      total_ports_scanned INTEGER NOT NULL DEFAULT 0,
+      results JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_discovery_scans_user_id ON discovery_scans(user_id);
+  `);
+
   // Refresh tokens
   await pool.query(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
