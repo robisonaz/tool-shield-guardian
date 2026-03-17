@@ -49,11 +49,77 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
 };
 
 function normalizeVersionForNvd(toolKey: string, version: string) {
+  const trimmedVersion = version.trim();
+
   if (toolKey === "openssh") {
-    return version.replace(/p\d+$/i, "").trim();
+    const match = trimmedVersion.match(/(\d+\.\d+(?:\.\d+)?)(?:p\d+)?/i);
+    return match?.[1] || trimmedVersion.replace(/p\d+$/i, "").trim();
   }
 
-  return version.trim();
+  if (toolKey === "openssl") {
+    const match = trimmedVersion.match(/(\d+\.\d+(?:\.\d+)?)/);
+    return match?.[1] || trimmedVersion.replace(/[a-z]+$/i, "").trim();
+  }
+
+  return trimmedVersion;
+}
+
+function buildCpeMatch(vendor: string, product: string, version: string) {
+  return `cpe:2.3:a:${vendor}:${product}:${version}:*:*:*:*:*:*:*`;
+}
+
+function getCpeCandidates(toolKey: string) {
+  const primary = CPE_MAP[toolKey];
+  if (!primary) return [];
+
+  if (toolKey === "openssh") {
+    return [
+      primary,
+      { vendor: "openssh", product: "openssh" },
+    ];
+  }
+
+  return [primary];
+}
+
+function buildNvdLookupUrls(toolName: string, toolKey: string, version: string) {
+  const trimmedVersion = version.trim();
+  const normalizedVersion = normalizeVersionForNvd(toolKey, trimmedVersion);
+  const versionCandidates = Array.from(new Set([trimmedVersion, normalizedVersion].filter(Boolean)));
+  const urls: string[] = [];
+
+  for (const cpeEntry of getCpeCandidates(toolKey)) {
+    for (const versionCandidate of versionCandidates) {
+      const cpeMatch = buildCpeMatch(cpeEntry.vendor, cpeEntry.product, versionCandidate);
+      urls.push(`${NVD_API_BASE}?virtualMatchString=${encodeURIComponent(cpeMatch)}&resultsPerPage=50`);
+    }
+  }
+
+  const keywordCandidates = Array.from(new Set([
+    `${toolName} ${trimmedVersion}`.trim(),
+    normalizedVersion !== trimmedVersion ? `${toolName} ${normalizedVersion}`.trim() : "",
+  ].filter(Boolean)));
+
+  for (const keywordSearch of keywordCandidates) {
+    urls.push(`${NVD_API_BASE}?keywordSearch=${encodeURIComponent(keywordSearch)}&resultsPerPage=50`);
+  }
+
+  return urls;
+}
+
+async function fetchNvdResponse(url: string) {
+  const response = await fetch(url, { headers: { Accept: "application/json" } });
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 429) {
+      return { data: null, rateLimited: true };
+    }
+
+    throw new Error(`NVD API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  return { data, rateLimited: false };
 }
 
 function mapCvssToSeverity(score: number): "critical" | "high" | "medium" | "low" {
@@ -81,27 +147,35 @@ router.post("/nvd-lookup", requireAuth, async (req, res) => {
     if (!toolName || !version) return res.status(400).json({ error: "toolName and version required" });
 
     const toolKey = toolName.toLowerCase().trim();
-    const cpeEntry = CPE_MAP[toolKey];
-    const normalizedVersion = normalizeVersionForNvd(toolKey, version);
+    const lookupUrls = buildNvdLookupUrls(toolName, toolKey, version);
 
-    let url: string;
-    if (cpeEntry) {
-      const cpeMatch = `cpe:2.3:a:${cpeEntry.vendor}:${cpeEntry.product}:${normalizedVersion}`;
-      url = `${NVD_API_BASE}?virtualMatchString=${encodeURIComponent(cpeMatch)}&resultsPerPage=50`;
-    } else {
-      url = `${NVD_API_BASE}?keywordSearch=${encodeURIComponent(`${toolName} ${version}`)}&resultsPerPage=20`;
-    }
+    let data: any = null;
+    let rateLimited = false;
 
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!response.ok) {
-      if (response.status === 403 || response.status === 429) {
-        return res.json({ cves: [], rateLimited: true });
+    for (const url of lookupUrls) {
+      console.log(`[NVD] trying lookup for ${toolName} ${version}: ${url}`);
+      const result = await fetchNvdResponse(url);
+
+      if (result.rateLimited) {
+        rateLimited = true;
+        continue;
       }
-      throw new Error(`NVD API returned ${response.status}`);
+
+      if ((result.data?.totalResults || 0) > 0) {
+        data = result.data;
+        break;
+      }
+
+      if (!data) {
+        data = result.data;
+      }
     }
 
-    const data = await response.json();
-    const vulnerabilities = data.vulnerabilities || [];
+    if (!data && rateLimited) {
+      return res.json({ cves: [], rateLimited: true });
+    }
+
+    const vulnerabilities = data?.vulnerabilities || [];
 
     const cves = vulnerabilities.map((vuln: any) => {
       const cve = vuln.cve;
@@ -118,7 +192,7 @@ router.post("/nvd-lookup", requireAuth, async (req, res) => {
     const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
     cves.sort((a: any, b: any) => severityOrder[a.severity] - severityOrder[b.severity]);
 
-    res.json({ cves, total: data.totalResults || 0 });
+    res.json({ cves, total: data?.totalResults || 0 });
   } catch (err) {
     console.error("NVD lookup error:", err);
     res.status(500).json({ error: "Erro interno" });
