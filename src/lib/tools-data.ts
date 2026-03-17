@@ -4,6 +4,7 @@ export interface SubVersionEntry {
   id: string;
   tool_id: string;
   version: string;
+  source_url: string | null;
   latest_version: string | null;
   latest_patch_for_cycle: string | null;
   is_outdated: boolean | null;
@@ -204,6 +205,7 @@ function mapDbToSubVersion(row: any): SubVersionEntry {
     id: row.id,
     tool_id: row.tool_id,
     version: row.version,
+    source_url: row.source_url ?? null,
     latest_version: row.latest_version,
     latest_patch_for_cycle: row.latest_patch_for_cycle,
     is_outdated: row.is_outdated,
@@ -326,7 +328,22 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   };
 
   const row = await updateToolApi(tool.id, toolData);
-  return mapDbToEntry(row);
+  const updatedTool = mapDbToEntry(row);
+
+  if (tool.sub_versions?.length) {
+    updatedTool.sub_versions = await Promise.all(
+      tool.sub_versions.map(async (subVersion) => {
+        try {
+          return await addSubVersionToTool(tool.id, currentName, subVersion.version, subVersion.source_url || undefined);
+        } catch (err) {
+          console.error(`Erro ao rechecar sub-versão ${subVersion.version}:`, err);
+          return subVersion;
+        }
+      })
+    );
+  }
+
+  return updatedTool;
 }
 
 export async function updateTool(id: string, name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
@@ -367,7 +384,7 @@ export async function updateTool(id: string, name: string, version: string, sour
   return mapDbToEntry(row);
 }
 
-export async function addSubVersionToTool(toolId: string, toolName: string, version: string): Promise<SubVersionEntry> {
+export async function addSubVersionToTool(toolId: string, toolName: string, version: string, sourceUrl?: string): Promise<SubVersionEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
 
@@ -389,6 +406,7 @@ export async function addSubVersionToTool(toolId: string, toolName: string, vers
 
   const data = {
     version: version.trim(),
+    source_url: sourceUrl?.trim() || null,
     latest_version: versionResult.latest_version,
     latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
     is_outdated,

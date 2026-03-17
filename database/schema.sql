@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS tool_versions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tool_id UUID NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
   version TEXT NOT NULL,
+  source_url TEXT,
   latest_version TEXT,
   latest_patch_for_cycle TEXT,
   is_outdated BOOLEAN,
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS tool_versions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_id ON tool_versions(tool_id);
+CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_lookup ON tool_versions(tool_id, version, source_url);
 
 CREATE OR REPLACE TRIGGER tool_versions_updated_at BEFORE UPDATE ON tool_versions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
