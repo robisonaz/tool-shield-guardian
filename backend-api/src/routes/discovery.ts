@@ -195,89 +195,152 @@ async function probeZabbixAgent(host: string, port: number): Promise<{ tool: str
   });
 }
 
-// PostgreSQL doesn't send a banner — we must send a StartupMessage to get the version
-// If SSL is required, we upgrade to TLS first; otherwise send plain StartupMessage.
+// PostgreSQL version detection — multi-strategy approach
 async function probePostgreSQL(host: string, port: number): Promise<{ tool: string; version: string | null }> {
+  // Strategy 1: Use the pg library (handles SSL, SCRAM, etc. automatically)
+  // Works when trust/peer auth is configured (common on internal networks)
+  try {
+    const version = await pgLibraryProbe(host, port);
+    if (version) return { tool: "PostgreSQL", version };
+  } catch { /* fall through */ }
+
+  // Strategy 2: Raw TCP handshake — send StartupMessage, respond to auth
+  // challenge with dummy password to trigger ErrorResponse with file/line fingerprint
+  try {
+    const version = await pgRawHandshake(host, port);
+    return { tool: "PostgreSQL", version };
+  } catch { /* fall through */ }
+
+  return { tool: "PostgreSQL", version: null };
+}
+
+// Strategy 1: Use pg library for SELECT version()
+async function pgLibraryProbe(host: string, port: number): Promise<string | null> {
+  const pg = (await import("pg")).default;
+  const client = new pg.Client({
+    host, port, user: "postgres", database: "postgres",
+    connectionTimeoutMillis: 4000,
+    statement_timeout: 2000,
+  });
+  try {
+    await client.connect();
+    const res = await client.query("SELECT version()");
+    const m = (res.rows[0]?.version || "").match(/PostgreSQL\s+([\d.]+)/i);
+    return m?.[1] || null;
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+// Strategy 2: Raw TCP with protocol handshake and auth challenge
+async function pgRawHandshake(host: string, port: number): Promise<string | null> {
   const tls = await import("tls");
 
-  function sendStartupAndCollect(sock: net.Socket | import("tls").TLSSocket): Promise<string | null> {
+  function collectAndParse(sock: net.Socket | import("tls").TLSSocket): Promise<string | null> {
     return new Promise((resolve) => {
+      let collected = Buffer.alloc(0);
+      let resolved = false;
+      let authResponseSent = false;
+
+      const done = (v: string | null) => {
+        if (resolved) return;
+        resolved = true;
+        sock.removeAllListeners("data");
+        sock.destroy();
+        resolve(v);
+      };
+
+      // Build and send StartupMessage (protocol 3.0)
       const params = "user\0postgres\0database\0postgres\0\0";
-      const paramsBuffer = Buffer.from(params, "utf8");
-      const startupLen = 4 + 4 + paramsBuffer.length;
+      const pb = Buffer.from(params, "utf8");
+      const startupLen = 4 + 4 + pb.length;
       const startup = Buffer.alloc(startupLen);
       startup.writeInt32BE(startupLen, 0);
       startup.writeInt32BE(196608, 4); // protocol 3.0
-      paramsBuffer.copy(startup, 8);
+      pb.copy(startup, 8);
       sock.write(startup);
 
-      let collected = Buffer.alloc(0);
-      const onData = (chunk: Buffer) => {
+      sock.on("data", (chunk: Buffer) => {
         collected = Buffer.concat([collected, chunk]);
-        const str = collected.toString("utf8");
 
-        // Look for server_version in ParameterStatus messages ('S' type)
-        const vMatch = str.match(/server_version\0([\d.]+)/);
-        if (vMatch) {
-          sock.removeListener("data", onData);
-          sock.destroy();
-          resolve(vMatch[1]);
-          return;
-        }
-
-        // Check ErrorResponse for version info (e.g. "PostgreSQL 15.4 on x86_64...")
-        const errMatch = str.match(/PostgreSQL\s+([\d.]+)/i);
-        if (errMatch) {
-          sock.removeListener("data", onData);
-          sock.destroy();
-          resolve(errMatch[1]);
-          return;
-        }
-
-        // Parse binary messages: look for 'S' (ParameterStatus) or 'R' (Auth) or 'E' (Error)
         let offset = 0;
-        while (offset < collected.length) {
-          if (offset + 5 > collected.length) break;
-          const msgType = String.fromCharCode(collected[offset]);
+        while (offset + 5 <= collected.length) {
+          const msgType = collected[offset];
           const msgLen = collected.readInt32BE(offset + 1);
-          if (offset + 1 + msgLen > collected.length) break; // incomplete message
+          if (msgLen < 4 || offset + 1 + msgLen > collected.length) break;
 
-          if (msgType === "S") {
-            // ParameterStatus: key\0value\0
-            const payload = collected.subarray(offset + 5, offset + 1 + msgLen).toString("utf8");
-            if (payload.startsWith("server_version\0")) {
-              const ver = payload.replace("server_version\0", "").replace(/\0$/, "");
-              const verNum = ver.match(/([\d]+\.[\d]+(?:\.[\d]+)?)/);
-              if (verNum) {
-                sock.removeListener("data", onData);
-                sock.destroy();
-                resolve(verNum[1]);
-                return;
+          const payload = collected.subarray(offset + 5, offset + 1 + msgLen);
+
+          // 'S' (0x53) = ParameterStatus — look for server_version
+          if (msgType === 0x53) {
+            const ps = payload.toString("utf8");
+            const ni = ps.indexOf("\0");
+            if (ni >= 0) {
+              const key = ps.substring(0, ni);
+              const val = ps.substring(ni + 1).replace(/\0$/, "");
+              if (key === "server_version") {
+                const m = val.match(/([\d]+\.[\d]+(?:\.[\d]+)?)/);
+                if (m) { done(m[1]); return; }
               }
             }
           }
+
+          // 'R' (0x52) = AuthenticationRequest
+          if (msgType === 0x52 && payload.length >= 4 && !authResponseSent) {
+            const authType = payload.readInt32BE(0);
+            if (authType === 0) {
+              // AuthenticationOk — ParameterStatus messages should follow
+            } else {
+              // Auth required — send dummy PasswordMessage to trigger ErrorResponse
+              authResponseSent = true;
+              if (authType === 10) {
+                // SCRAM-SHA-256 — send SASLInitialResponse with garbage
+                const mech = "SCRAM-SHA-256";
+                const clientFirst = "n,,n=*,r=invalidnonce12345";
+                const saslLen = 4 + mech.length + 1 + 4 + clientFirst.length;
+                const saslBuf = Buffer.alloc(1 + saslLen);
+                let off = 0;
+                saslBuf[off++] = 0x70; // 'p'
+                saslBuf.writeInt32BE(saslLen, off); off += 4;
+                saslBuf.write(mech, off, "utf8"); off += mech.length;
+                saslBuf[off++] = 0;
+                saslBuf.writeInt32BE(clientFirst.length, off); off += 4;
+                saslBuf.write(clientFirst, off, "utf8");
+                sock.write(saslBuf);
+              } else {
+                // MD5 (5) or cleartext (3) — send dummy PasswordMessage
+                const pw = "wrong_password";
+                const pwLen = 4 + pw.length + 1;
+                const pwBuf = Buffer.alloc(1 + pwLen);
+                pwBuf[0] = 0x70; // 'p'
+                pwBuf.writeInt32BE(pwLen, 1);
+                pwBuf.write(pw, 5, "utf8");
+                pwBuf[5 + pw.length] = 0;
+                sock.write(pwBuf);
+              }
+            }
+          }
+
+          // 'E' (0x45) = ErrorResponse — parse fields for version fingerprint
+          if (msgType === 0x45) {
+            const version = parsePostgresErrorFields(payload);
+            done(version);
+            return;
+          }
+
           offset += 1 + msgLen;
         }
 
-        // Safety: if we collected enough data, stop
-        if (collected.length > 4096) {
-          sock.removeListener("data", onData);
-          sock.destroy();
-          resolve(null);
-        }
-      };
-      sock.on("data", onData);
-      setTimeout(() => {
-        sock.removeAllListeners("data");
-        sock.destroy();
-        resolve(null);
-      }, 3000);
+        if (collected.length > 16384) done(null);
+      });
+
+      setTimeout(() => done(null), 5000);
     });
   }
 
   return new Promise((resolve) => {
     const socket = new net.Socket();
-    socket.setTimeout(4000);
+    socket.setTimeout(6000);
 
     socket.once("connect", () => {
       // Send SSLRequest
@@ -286,32 +349,100 @@ async function probePostgreSQL(host: string, port: number): Promise<{ tool: stri
       sslReq.writeInt32BE(80877103, 4);
       socket.write(sslReq);
 
-      socket.once("data", async (sslResponse) => {
-        const sslByte = String.fromCharCode(sslResponse[0]);
-
+      socket.once("data", async (resp) => {
+        const sslByte = String.fromCharCode(resp[0]);
         if (sslByte === "S") {
-          // Server supports SSL — upgrade to TLS
-          const tlsSocket = tls.connect({ socket, rejectUnauthorized: false });
-          tlsSocket.once("secureConnect", async () => {
-            const version = await sendStartupAndCollect(tlsSocket);
-            resolve({ tool: "PostgreSQL", version });
+          const tlsSock = tls.connect({ socket, rejectUnauthorized: false });
+          tlsSock.once("secureConnect", async () => {
+            resolve(await collectAndParse(tlsSock));
           });
-          tlsSocket.once("error", () => {
-            tlsSocket.destroy();
-            resolve({ tool: "PostgreSQL", version: null });
-          });
+          tlsSock.once("error", () => { tlsSock.destroy(); resolve(null); });
         } else {
-          // 'N' = no SSL, proceed with plain connection
-          const version = await sendStartupAndCollect(socket);
-          resolve({ tool: "PostgreSQL", version });
+          resolve(await collectAndParse(socket));
         }
       });
     });
 
-    socket.once("error", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
-    socket.once("timeout", () => { socket.destroy(); resolve({ tool: "PostgreSQL", version: null }); });
+    socket.once("error", () => { socket.destroy(); resolve(null); });
+    socket.once("timeout", () => { socket.destroy(); resolve(null); });
     socket.connect(port, host);
   });
+}
+
+// Parse ErrorResponse fields (F=file, L=line, R=routine, M=message)
+// and extract PostgreSQL version via message text or file/line fingerprint
+function parsePostgresErrorFields(payload: Buffer): string | null {
+  let file = "", line = "", routine = "", message = "";
+  let pos = 0;
+  while (pos < payload.length) {
+    const ft = payload[pos];
+    if (ft === 0) break;
+    pos++;
+    const end = payload.indexOf(0, pos);
+    if (end === -1) break;
+    const val = payload.subarray(pos, end).toString("utf8");
+    if (ft === 0x46) file = val;     // F
+    if (ft === 0x4C) line = val;     // L
+    if (ft === 0x52) routine = val;  // R
+    if (ft === 0x4D) message = val;  // M
+    pos = end + 1;
+  }
+
+  // Check message for explicit version string
+  const msgMatch = message.match(/PostgreSQL\s+([\d.]+)/i);
+  if (msgMatch) return msgMatch[1];
+
+  // File/line fingerprint mapping (Metasploit + modern PostgreSQL source analysis)
+  if (file && line) {
+    const fp = `${file}:${line}:${routine}`;
+    const known: Record<string, string> = {
+      // PostgreSQL 9.x
+      "auth.c:302:auth_failed": "9.1",
+      "auth.c:285:auth_failed": "9.4",
+      "auth.c:481:ClientAuthentication": "9.4",
+      "miscinit.c:362:InitializeSessionUserId": "9.4",
+      "postinit.c:794:InitPostgres": "9.4",
+      // PostgreSQL 8.x
+      "auth.c:395:auth_failed": "7.4",
+      "auth.c:400:auth_failed": "8.0",
+      "auth.c:337:auth_failed": "8.1",
+      "auth.c:362:auth_failed": "8.2",
+      "auth.c:1003:auth_failed": "8.3",
+      "auth.c:258:auth_failed": "8.4",
+      "auth.c:273:auth_failed": "8.4",
+    };
+    if (known[fp]) return known[fp];
+
+    // Heuristic: file name tells us PG 17+ (backend_startup.c) vs older (postmaster.c/auth.c)
+    if (file.includes("backend_startup")) return "17";
+
+    // auth.c with auth_failed in modern PG (10+)
+    if (routine === "auth_failed" && file.includes("auth.c")) {
+      const ln = parseInt(line);
+      // Modern PG auth.c auth_failed line ranges (approximate from source)
+      if (ln >= 335 && ln <= 345) return "16";
+      if (ln >= 330 && ln <= 340) return "15";
+      if (ln >= 325 && ln <= 335) return "14";
+      if (ln >= 320 && ln <= 330) return "13";
+      if (ln >= 315 && ln <= 325) return "12";
+      if (ln >= 310 && ln <= 320) return "11";
+      if (ln >= 300 && ln <= 315) return "10";
+    }
+
+    // ClientAuthentication routine — broader ranges
+    if (routine === "ClientAuthentication" && file.includes("auth.c")) {
+      const ln = parseInt(line);
+      if (ln >= 490 && ln <= 510) return "16";
+      if (ln >= 485 && ln <= 500) return "15";
+      if (ln >= 480 && ln <= 495) return "14";
+      if (ln >= 475 && ln <= 490) return "13";
+      if (ln >= 470 && ln <= 485) return "12";
+      if (ln >= 465 && ln <= 480) return "11";
+      if (ln >= 460 && ln <= 475) return "10";
+    }
+  }
+
+  return null;
 }
 
 // Try to fingerprint an HTTP(S) service
