@@ -637,12 +637,17 @@ router.post("/scan", requireAuth, async (req, res) => {
     };
 
     // Save scan to history (keep only last 5 per user)
+    // Sanitize null bytes (\u0000) from banners — PostgreSQL rejects them in text/json
+    const sanitizedResults = results.map((r) => ({
+      ...r,
+      banner: typeof r.banner === "string" ? r.banner.replace(/\u0000/g, "") : r.banner,
+    }));
     try {
       const userId = (req as any).user?.id;
       if (userId) {
         await pool.query(
           `INSERT INTO discovery_scans (user_id, cidr, total_hosts, total_ports_scanned, results) VALUES ($1, $2, $3, $4, $5)`,
-          [userId, cidr, ips.length, portsToScan.length, JSON.stringify(results)]
+          [userId, cidr, ips.length, portsToScan.length, JSON.stringify(sanitizedResults)]
         );
         // Delete oldest scans keeping only 5
         await pool.query(
