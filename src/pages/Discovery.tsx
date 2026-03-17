@@ -70,6 +70,7 @@ const Discovery = () => {
       toast.error(err.message || "Erro ao realizar scan");
     } finally {
       setScanning(false);
+      loadHistory();
     }
   };
 
