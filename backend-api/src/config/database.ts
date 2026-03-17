@@ -98,6 +98,7 @@ export async function ensureSchema() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       tool_id UUID NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
       version TEXT NOT NULL,
+      source_url TEXT,
       latest_version TEXT,
       latest_patch_for_cycle TEXT,
       is_outdated BOOLEAN,
@@ -109,7 +110,9 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE tool_versions ADD COLUMN IF NOT EXISTS source_url TEXT;
     CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_id ON tool_versions(tool_id);
+    CREATE INDEX IF NOT EXISTS idx_tool_versions_tool_lookup ON tool_versions(tool_id, version, source_url);
   `);
 
   // Discovery scans history

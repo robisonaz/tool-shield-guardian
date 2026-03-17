@@ -118,21 +118,28 @@ const Discovery = () => {
         );
 
         if (existing) {
-          // Check if this exact version already exists (main or sub)
-          const mainVersionMatch = existing.version === version;
-          const subVersionMatch = existing.sub_versions?.some(
-            (sv) => sv.version === version
+          const exactMainMatch = existing.version === version && existing.source_url === sourceUrl;
+          const exactSubVersionMatch = existing.sub_versions?.find(
+            (sv) => sv.version === version && sv.source_url === sourceUrl
           );
 
-          if (mainVersionMatch || subVersionMatch) {
+          if (exactMainMatch || exactSubVersionMatch) {
             continue;
           }
 
-          // Add as sub-version
-          await addSubVersionToTool(existing.id, existing.name, version);
-          // Track the new sub-version locally so next iterations see it
+          const subVersion = await addSubVersionToTool(existing.id, existing.name, version, sourceUrl);
+
           if (!existing.sub_versions) existing.sub_versions = [];
-          existing.sub_versions.push({ id: crypto.randomUUID(), tool_id: existing.id, version, latest_version: null, latest_patch_for_cycle: null, is_outdated: null, is_patch_outdated: null, eol: null, lts: null, cycle_label: null, cves: [] });
+          const existingIndex = existing.sub_versions.findIndex(
+            (sv) => sv.id === subVersion.id || (sv.version === subVersion.version && sv.source_url === subVersion.source_url)
+          );
+
+          if (existingIndex >= 0) {
+            existing.sub_versions[existingIndex] = subVersion;
+          } else {
+            existing.sub_versions.unshift(subVersion);
+          }
+
           countSub++;
         } else {
           // Create new tool and add to local list for dedup in subsequent iterations

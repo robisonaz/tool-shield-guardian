@@ -82,6 +82,16 @@ function CvesSummary({ cves }: { cves: { id: string; severity: "critical" | "hig
 function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolName: string; onRemove: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const status = sv.is_outdated === null ? "unknown" : sv.is_outdated ? "outdated" : "current";
+  const isDiscoverySource = !!sv.source_url && /^https?:\/\/\d+\.\d+\.\d+\.\d+(?::\d+)?\/?$/i.test(sv.source_url);
+  const sourceLabel = (() => {
+    if (!sv.source_url) return null;
+    try {
+      const url = new URL(sv.source_url);
+      return url.port ? `${url.hostname}:${url.port}` : url.hostname;
+    } catch {
+      return sv.source_url;
+    }
+  })();
 
   return (
     <>
@@ -95,9 +105,18 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
           ) : <span className="w-3 inline-block" />}
         </td>
         <td className="px-4 py-2 text-xs text-muted-foreground italic">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Layers className="h-3 w-3 text-muted-foreground/60" />
-            Sub-versão
+            <span>Sub-versão</span>
+            {sourceLabel && (
+              <span
+                title={`${toolName} em ${sv.source_url}`}
+                className="inline-flex items-center gap-1 rounded border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-[11px] not-italic text-accent"
+              >
+                {isDiscoverySource ? <Radar className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                {sourceLabel}
+              </span>
+            )}
             <LtsBadge lts={sv.lts} />
             <EolBadge eol={sv.eol} />
           </div>
