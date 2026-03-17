@@ -74,7 +74,7 @@ const Discovery = () => {
     let countNew = 0;
     let countSub = 0;
 
-    // Load existing tools to check for duplicates
+    // Load existing tools and keep a mutable copy to track newly created ones
     const existingTools = await getTools();
 
     for (const idx of selected) {
@@ -86,7 +86,7 @@ const Discovery = () => {
       const sourceUrl = `http://${r.ip}:${r.port}`;
 
       try {
-        // Find existing tool with same name (case-insensitive)
+        // Find existing tool with same name (case-insensitive), including just-created ones
         const existing = existingTools.find(
           (t) => t.name.toLowerCase().trim() === toolNameLower
         );
@@ -99,16 +99,19 @@ const Discovery = () => {
           );
 
           if (mainVersionMatch || subVersionMatch) {
-            // Already registered, skip
             continue;
           }
 
           // Add as sub-version
           await addSubVersionToTool(existing.id, existing.name, version);
+          // Track the new sub-version locally so next iterations see it
+          if (!existing.sub_versions) existing.sub_versions = [];
+          existing.sub_versions.push({ id: crypto.randomUUID(), tool_id: existing.id, version, latest_version: null, latest_patch_for_cycle: null, is_outdated: null, is_patch_outdated: null, eol: null, lts: null, cycle_label: null, cves: [] });
           countSub++;
         } else {
-          // Create new tool
-          await addTool(r.tool, version, sourceUrl);
+          // Create new tool and add to local list for dedup in subsequent iterations
+          const newTool = await addTool(r.tool, version, sourceUrl);
+          existingTools.push(newTool);
           countNew++;
         }
       } catch (err) {
