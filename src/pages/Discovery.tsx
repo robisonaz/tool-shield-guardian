@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, ArrowLeft, Search, Loader2, Plus, Check, Globe, Server } from "lucide-react";
+import { Radar, ArrowLeft, Search, Loader2, Plus, Check, Globe, Server, Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { discoveryScan, type DiscoveryResult } from "@/lib/api-client";
+import { discoveryScan, getDiscoveryHistory, type DiscoveryResult, type DiscoveryScanHistory } from "@/lib/api-client";
 import { addTool, getTools, addSubVersionToTool } from "@/lib/tools-data";
 
 const Discovery = () => {
@@ -19,6 +19,31 @@ const Discovery = () => {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [registering, setRegistering] = useState(false);
   const [scanInfo, setScanInfo] = useState<{ total_hosts: number; total_ports_scanned: number } | null>(null);
+  const [history, setHistory] = useState<DiscoveryScanHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const data = await getDiscoveryHistory();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const loadFromHistory = (scan: DiscoveryScanHistory) => {
+    setResults(scan.results);
+    setScanInfo({ total_hosts: scan.total_hosts, total_ports_scanned: scan.total_ports_scanned });
+    setCidr(scan.cidr);
+    setSelected(new Set());
+    toast.info(`Scan de ${scan.cidr} carregado do histórico`);
+  };
 
   const handleScan = async () => {
     if (!cidr.trim()) {
