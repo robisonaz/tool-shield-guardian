@@ -219,7 +219,7 @@ const Index = () => {
               </Button>
             )}
           </div>
-          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} />
+          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} onChangeCategory={handleChangeCategory} />
         </motion.div>
       </main>
 
