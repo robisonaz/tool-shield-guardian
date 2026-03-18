@@ -1,4 +1,4 @@
-import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion, changeToolCategory } from "@/lib/api-client";
 
 export interface SubVersionEntry {
   id: string;
