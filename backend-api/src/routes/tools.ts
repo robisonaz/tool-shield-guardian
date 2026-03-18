@@ -702,13 +702,13 @@ router.get("/", requireAuth, async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves } = req.body;
+    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves, category } = req.body;
     if (!name || !version) return res.status(400).json({ error: "name and version required" });
 
     const { rows } = await pool.query(
-      `INSERT INTO tools (user_id, name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [userId, name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || [])]
+      `INSERT INTO tools (user_id, name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves, category)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [userId, name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || []), category || 'ferramenta']
     );
     res.status(201).json(rows[0]);
   } catch (err) {
