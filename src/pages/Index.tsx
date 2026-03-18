@@ -34,7 +34,7 @@ const Index = () => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
     try {
-      const entry = await addTool(name, version, sourceUrl);
+      const entry = await addTool(name, version, sourceUrl, category);
       await loadTools();
 
       if (entry.is_outdated === null) {
