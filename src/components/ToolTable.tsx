@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Radar, Plus, Loader2, Layers } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Radar, Plus, Loader2, Layers, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import type { ToolEntry, SubVersionEntry } from "@/lib/tools-data";
-import { AVAILABLE_TOOLS } from "@/lib/tools-data";
+import type { ToolEntry, SubVersionEntry, ToolCategory } from "@/lib/tools-data";
+import { AVAILABLE_TOOLS, CATEGORY_LABELS } from "@/lib/tools-data";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ToolTableProps {
@@ -14,6 +14,7 @@ interface ToolTableProps {
   onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+  onChangeCategory?: (id: string, category: ToolCategory) => void;
 }
 
 function EolBadge({ eol }: { eol: string | boolean | null }) {
