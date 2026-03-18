@@ -29,7 +29,7 @@ const Index = () => {
     loadTools();
   }, []);
 
-  const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => {
     setAddDialogOpen(false);
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
