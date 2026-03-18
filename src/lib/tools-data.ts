@@ -235,6 +235,7 @@ function mapDbToEntry(row: any): ToolEntry {
     lts: row.lts,
     cycle_label: row.cycle_label,
     cves: typeof row.cves === "string" ? JSON.parse(row.cves) : (row.cves || []),
+    category: row.category || "ferramenta",
   };
 }
 
