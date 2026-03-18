@@ -107,6 +107,18 @@ const Index = () => {
     }
   };
 
+  const handleChangeCategory = async (id: string, category: ToolCategory) => {
+    try {
+      await moveToolCategory(id, category);
+      await loadTools();
+      const label = category === "ferramenta" ? "Ferramentas" : "Serviços";
+      toast.success(`Movido para ${label}.`);
+    } catch (err) {
+      console.error("Erro ao mover:", err);
+      toast.error("Erro ao mover item.");
+    }
+  };
+
   const handleRecheckAll = async () => {
     if (tools.length === 0) return;
 
