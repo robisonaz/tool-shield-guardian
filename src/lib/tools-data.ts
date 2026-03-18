@@ -430,6 +430,16 @@ export async function removeSubVersion(toolId: string, versionId: string) {
   await deleteSubVersion(toolId, versionId);
 }
 
+export async function moveToolCategory(toolId: string, category: ToolCategory): Promise<ToolEntry> {
+  const row = await changeToolCategory(toolId, category);
+  return mapDbToEntry(row);
+}
+
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>
   k.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 );
+
+export const CATEGORY_LABELS: Record<ToolCategory, string> = {
+  ferramenta: "Ferramentas",
+  servico: "Serviços",
+};
