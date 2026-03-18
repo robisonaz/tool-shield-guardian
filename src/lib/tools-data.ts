@@ -15,6 +15,8 @@ export interface SubVersionEntry {
   cves: CVEEntry[];
 }
 
+export type ToolCategory = "ferramenta" | "servico";
+
 export interface ToolEntry {
   id: string;
   user_id?: string;
@@ -30,6 +32,7 @@ export interface ToolEntry {
   lts: string | boolean | null;
   cycle_label: string | null;
   cves: CVEEntry[];
+  category: ToolCategory;
   loading?: boolean;
   sub_versions?: SubVersionEntry[];
 }
