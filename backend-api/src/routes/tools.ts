@@ -754,7 +754,28 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
+// Change tool category
+router.patch("/:id/category", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const { category } = req.body;
+    if (!category) return res.status(400).json({ error: "category required" });
+
+    const { rows } = await pool.query(
+      "UPDATE tools SET category = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+      [category, id, userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Change category error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
 // ─── Sub-versions CRUD ───
+
 
 // List sub-versions for a tool
 router.get("/:id/versions", requireAuth, async (req, res) => {
