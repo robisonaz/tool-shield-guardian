@@ -271,6 +271,7 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
     lts: versionResult.lts != null ? String(versionResult.lts) : null,
     cycle_label: versionResult.cycle_label,
     cves,
+    category,
   };
 
   const row = await createTool(toolData);
