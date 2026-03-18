@@ -348,6 +348,19 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
               </>
             ) : (
               <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newCat: ToolCategory = tool.category === "ferramenta" ? "servico" : "ferramenta";
+                    onChangeCategory?.(tool.id, newCat);
+                  }}
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 p-0"
+                  title={`Mover para ${tool.category === "ferramenta" ? "Serviços" : "Ferramentas"}`}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                </Button>
                 <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); setExpanded(true); }} className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0" title="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
