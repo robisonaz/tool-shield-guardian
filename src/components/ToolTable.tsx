@@ -485,7 +485,9 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
   );
 }
 
-export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }: ToolTableProps) {
+export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: ToolTableProps) {
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
   if (tools.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
@@ -496,35 +498,81 @@ export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSu
     );
   }
 
+  const categories: ToolCategory[] = ["ferramenta", "servico"];
+  const grouped = categories.map(cat => ({
+    category: cat,
+    label: CATEGORY_LABELS[cat],
+    items: tools.filter(t => (t.category || "ferramenta") === cat),
+  })).filter(g => g.items.length > 0);
+
+  const toggleSection = (cat: string) => {
+    setCollapsedSections(prev => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  const renderTable = (items: ToolEntry[]) => (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-secondary/50">
+            <th className="px-4 py-3 w-8" />
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Ferramenta</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Versão</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
+            <th className="px-4 py-3 w-36" />
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((tool) => (
+            <ToolRow
+              key={tool.id}
+              tool={tool}
+              onRemove={onRemove}
+              onEdit={onEdit}
+              onAddSubVersion={onAddSubVersion}
+              onRemoveSubVersion={onRemoveSubVersion}
+              onChangeCategory={onChangeCategory}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-secondary/50">
-              <th className="px-4 py-3 w-8" />
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Ferramenta</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Versão</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
-              <th className="px-4 py-3 w-28" />
-            </tr>
-          </thead>
-          <tbody>
-            {tools.map((tool) => (
-              <ToolRow
-                key={tool.id}
-                tool={tool}
-                onRemove={onRemove}
-                onEdit={onEdit}
-                onAddSubVersion={onAddSubVersion}
-                onRemoveSubVersion={onRemoveSubVersion}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="space-y-4">
+      {grouped.map(({ category, label, items }) => (
+        <div key={category} className="rounded-lg border border-border bg-card overflow-hidden">
+          <button
+            onClick={() => toggleSection(category)}
+            className="w-full flex items-center gap-2 px-4 py-3 bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
+          >
+            {collapsedSections[category] ? (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-primary" />
+            )}
+            <span className="text-sm font-sans font-semibold text-foreground">{label}</span>
+            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+              {items.length}
+            </span>
+          </button>
+          <AnimatePresence>
+            {!collapsedSections[category] && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                {renderTable(items)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
     </div>
   );
 }
