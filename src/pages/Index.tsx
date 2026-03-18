@@ -6,7 +6,7 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { AddToolForm } from "@/components/AddToolForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, type ToolEntry } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, moveToolCategory, type ToolEntry, type ToolCategory } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
@@ -29,12 +29,12 @@ const Index = () => {
     loadTools();
   }, []);
 
-  const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => {
     setAddDialogOpen(false);
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
     try {
-      const entry = await addTool(name, version, sourceUrl);
+      const entry = await addTool(name, version, sourceUrl, category);
       await loadTools();
 
       if (entry.is_outdated === null) {
@@ -104,6 +104,18 @@ const Index = () => {
     } catch (err) {
       console.error("Erro ao remover sub-versão:", err);
       toast.error("Erro ao remover sub-versão.");
+    }
+  };
+
+  const handleChangeCategory = async (id: string, category: ToolCategory) => {
+    try {
+      await moveToolCategory(id, category);
+      await loadTools();
+      const label = category === "ferramenta" ? "Ferramentas" : "Serviços";
+      toast.success(`Movido para ${label}.`);
+    } catch (err) {
+      console.error("Erro ao mover:", err);
+      toast.error("Erro ao mover item.");
     }
   };
 
@@ -207,7 +219,7 @@ const Index = () => {
               </Button>
             )}
           </div>
-          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} />
+          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} onChangeCategory={handleChangeCategory} />
         </motion.div>
       </main>
 

@@ -1,4 +1,4 @@
-import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion, changeToolCategory } from "@/lib/api-client";
 
 export interface SubVersionEntry {
   id: string;
@@ -15,6 +15,8 @@ export interface SubVersionEntry {
   cves: CVEEntry[];
 }
 
+export type ToolCategory = "ferramenta" | "servico";
+
 export interface ToolEntry {
   id: string;
   user_id?: string;
@@ -30,6 +32,7 @@ export interface ToolEntry {
   lts: string | boolean | null;
   cycle_label: string | null;
   cves: CVEEntry[];
+  category: ToolCategory;
   loading?: boolean;
   sub_versions?: SubVersionEntry[];
 }
@@ -232,10 +235,11 @@ function mapDbToEntry(row: any): ToolEntry {
     lts: row.lts,
     cycle_label: row.cycle_label,
     cves: typeof row.cves === "string" ? JSON.parse(row.cves) : (row.cves || []),
+    category: row.category || "ferramenta",
   };
 }
 
-export async function addTool(name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
+export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta"): Promise<ToolEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
 
@@ -267,6 +271,7 @@ export async function addTool(name: string, version: string, sourceUrl?: string)
     lts: versionResult.lts != null ? String(versionResult.lts) : null,
     cycle_label: versionResult.cycle_label,
     cves,
+    category,
   };
 
   const row = await createTool(toolData);
@@ -425,6 +430,16 @@ export async function removeSubVersion(toolId: string, versionId: string) {
   await deleteSubVersion(toolId, versionId);
 }
 
+export async function moveToolCategory(toolId: string, category: ToolCategory): Promise<ToolEntry> {
+  const row = await changeToolCategory(toolId, category);
+  return mapDbToEntry(row);
+}
+
 export const AVAILABLE_TOOLS = SUPPORTED_TOOLS.map(k =>
   k.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 );
+
+export const CATEGORY_LABELS: Record<ToolCategory, string> = {
+  ferramenta: "Ferramentas",
+  servico: "Serviços",
+};

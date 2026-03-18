@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Radar, Plus, Loader2, Layers } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, Shield, AlertTriangle, ArrowUpCircle, Clock, Star, Pencil, Check, X, Globe, Radar, Plus, Loader2, Layers, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import type { ToolEntry, SubVersionEntry } from "@/lib/tools-data";
-import { AVAILABLE_TOOLS } from "@/lib/tools-data";
+import type { ToolEntry, SubVersionEntry, ToolCategory } from "@/lib/tools-data";
+import { AVAILABLE_TOOLS, CATEGORY_LABELS } from "@/lib/tools-data";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ToolTableProps {
@@ -14,6 +14,7 @@ interface ToolTableProps {
   onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+  onChangeCategory?: (id: string, category: ToolCategory) => void;
 }
 
 function EolBadge({ eol }: { eol: string | boolean | null }) {
@@ -207,12 +208,13 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
   );
 }
 
-function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }: {
+function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: {
   tool: ToolEntry;
   onRemove: (id: string) => void;
   onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+  onChangeCategory?: (id: string, category: ToolCategory) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -346,6 +348,19 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
               </>
             ) : (
               <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newCat: ToolCategory = tool.category === "ferramenta" ? "servico" : "ferramenta";
+                    onChangeCategory?.(tool.id, newCat);
+                  }}
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 p-0"
+                  title={`Mover para ${tool.category === "ferramenta" ? "Serviços" : "Ferramentas"}`}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                </Button>
                 <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); setExpanded(true); }} className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8 p-0" title="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -470,7 +485,9 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }
   );
 }
 
-export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion }: ToolTableProps) {
+export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: ToolTableProps) {
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
   if (tools.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
@@ -481,35 +498,81 @@ export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSu
     );
   }
 
+  const categories: ToolCategory[] = ["ferramenta", "servico"];
+  const grouped = categories.map(cat => ({
+    category: cat,
+    label: CATEGORY_LABELS[cat],
+    items: tools.filter(t => (t.category || "ferramenta") === cat),
+  })).filter(g => g.items.length > 0);
+
+  const toggleSection = (cat: string) => {
+    setCollapsedSections(prev => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  const renderTable = (items: ToolEntry[]) => (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-secondary/50">
+            <th className="px-4 py-3 w-8" />
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Ferramenta</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Versão</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+            <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
+            <th className="px-4 py-3 w-36" />
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((tool) => (
+            <ToolRow
+              key={tool.id}
+              tool={tool}
+              onRemove={onRemove}
+              onEdit={onEdit}
+              onAddSubVersion={onAddSubVersion}
+              onRemoveSubVersion={onRemoveSubVersion}
+              onChangeCategory={onChangeCategory}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-secondary/50">
-              <th className="px-4 py-3 w-8" />
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Ferramenta</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Versão</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Última</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-sans font-semibold text-muted-foreground uppercase tracking-wider">CVEs</th>
-              <th className="px-4 py-3 w-28" />
-            </tr>
-          </thead>
-          <tbody>
-            {tools.map((tool) => (
-              <ToolRow
-                key={tool.id}
-                tool={tool}
-                onRemove={onRemove}
-                onEdit={onEdit}
-                onAddSubVersion={onAddSubVersion}
-                onRemoveSubVersion={onRemoveSubVersion}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="space-y-4">
+      {grouped.map(({ category, label, items }) => (
+        <div key={category} className="rounded-lg border border-border bg-card overflow-hidden">
+          <button
+            onClick={() => toggleSection(category)}
+            className="w-full flex items-center gap-2 px-4 py-3 bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
+          >
+            {collapsedSections[category] ? (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-primary" />
+            )}
+            <span className="text-sm font-sans font-semibold text-foreground">{label}</span>
+            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+              {items.length}
+            </span>
+          </button>
+          <AnimatePresence>
+            {!collapsedSections[category] && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                {renderTable(items)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
     </div>
   );
 }

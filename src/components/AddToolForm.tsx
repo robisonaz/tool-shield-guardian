@@ -2,28 +2,30 @@ import { useState } from "react";
 import { Plus, Terminal, Globe, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AVAILABLE_TOOLS } from "@/lib/tools-data";
+import { AVAILABLE_TOOLS, CATEGORY_LABELS, type ToolCategory } from "@/lib/tools-data";
 import { versionDetect } from "@/lib/api-client";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 interface AddToolFormProps {
-  onAdd: (name: string, version: string, sourceUrl?: string) => void;
+  onAdd: (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => void;
 }
 
 export function AddToolForm({ onAdd }: AddToolFormProps) {
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [url, setUrl] = useState("");
+  const [category, setCategory] = useState<ToolCategory>("ferramenta");
   const [detecting, setDetecting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !version.trim()) return;
-    onAdd(name.trim(), version.trim(), url.trim() || undefined);
+    onAdd(name.trim(), version.trim(), url.trim() || undefined, category);
     setName("");
     setVersion("");
     setUrl("");
+    setCategory("ferramenta");
   };
 
   const handleDetect = async () => {
@@ -115,6 +117,17 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
             onChange={(e) => setVersion(e.target.value)}
             className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
           />
+        </div>
+        <div className="w-full sm:w-40">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ToolCategory)}
+            className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+          >
+            {(Object.entries(CATEGORY_LABELS) as [ToolCategory, string][]).map(([value, label]) => (
+              <option key={value} value={value}>{label.slice(0, -1)}</option>
+            ))}
+          </select>
         </div>
         <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/80 glow-primary">
           <Plus className="h-4 w-4 mr-1" />

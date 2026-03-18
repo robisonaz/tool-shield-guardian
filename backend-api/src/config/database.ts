@@ -86,9 +86,11 @@ export async function ensureSchema() {
       lts TEXT,
       cycle_label TEXT,
       cves JSONB NOT NULL DEFAULT '[]',
+      category TEXT NOT NULL DEFAULT 'ferramenta',
       added_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE tools ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'ferramenta';
     CREATE INDEX IF NOT EXISTS idx_tools_user_id ON tools(user_id);
   `);
 

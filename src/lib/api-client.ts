@@ -194,6 +194,13 @@ export async function deleteTool(id: string) {
   return apiFetch(`/tools/${id}`, { method: "DELETE" });
 }
 
+export async function changeToolCategory(id: string, category: string) {
+  return apiFetch<any>(`/tools/${id}/category`, {
+    method: "PATCH",
+    body: JSON.stringify({ category }),
+  });
+}
+
 // Sub-versions
 export async function fetchSubVersions(toolId: string) {
   return apiFetch<any[]>(`/tools/${toolId}/versions`);
