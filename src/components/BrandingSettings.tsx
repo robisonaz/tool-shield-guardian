@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Palette, Upload, Save, X } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { resolveBackendUrl } from "@/lib/api-client";
 import { Input } from "@/components/ui/input";
