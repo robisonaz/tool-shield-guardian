@@ -37,8 +37,7 @@ export function BrandingSettingsSection() {
     try {
       const result = await uploadLogo(file);
       setForm({ ...form, logo_url: result.logo_url });
-      setPreviewLogo(result.logo_url);
-      toast.success("Logo carregado!");
+      setPreviewLogo(resolveBackendUrl(result.logo_url));
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao fazer upload do logo.");
