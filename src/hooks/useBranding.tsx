@@ -6,6 +6,7 @@ export interface BrandingSettings {
   app_name: string;
   app_subtitle: string;
   logo_url: string | null;
+  logo_size: number;
   primary_color: string;
   accent_color: string;
 }
