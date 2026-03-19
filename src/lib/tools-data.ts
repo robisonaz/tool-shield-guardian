@@ -364,6 +364,10 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   const row = await updateToolApi(tool.id, toolData);
   const updatedTool = mapDbToEntry(row);
 
+  // Auto-open Znuny ticket for critical CVEs
+  const znunyResult = await tryOpenZnunyTicket(currentName, currentVersion, cves);
+  if (znunyResult) (updatedTool as any)._znunyResult = znunyResult;
+
   if (tool.sub_versions?.length) {
     updatedTool.sub_versions = await Promise.all(
       tool.sub_versions.map(async (subVersion) => {
