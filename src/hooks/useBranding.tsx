@@ -57,6 +57,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
           app_name: data.app_name,
           app_subtitle: data.app_subtitle,
           logo_url: resolveBackendUrl(data.logo_url),
+          logo_size: data.logo_size || 36,
           primary_color: data.primary_color,
           accent_color: data.accent_color,
         };
