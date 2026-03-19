@@ -309,10 +309,12 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(currentName, currentVersion),
       fetchCVEsFromNVD(currentName, currentVersion),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao rechecar ferramenta:", err);
   }
