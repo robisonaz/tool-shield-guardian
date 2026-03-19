@@ -50,6 +50,12 @@ const Index = () => {
       } else {
         toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
       }
+
+      // Znuny ticket feedback
+      const znunyResult = (entry as any)._znunyResult;
+      if (znunyResult?.success) {
+        toast.success(`🎫 Chamado Znuny criado: ${znunyResult.message}`);
+      }
     } catch (err) {
       console.error("Erro ao cadastrar:", err);
       toast.error("Erro ao cadastrar ferramenta.");
