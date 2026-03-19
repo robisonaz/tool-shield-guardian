@@ -23,7 +23,9 @@ const AddTool = () => {
         toast.success(`"${name} ${version}" está atualizada!`);
       }
 
-      if (entry.cves.length > 0) {
+      if ((entry as any)._cveRateLimited) {
+        toast.warning(`Consulta de CVEs limitada pela API do NVD. Tente rechecar em alguns segundos.`);
+      } else if (entry.cves.length > 0) {
         toast.error(`${entry.cves.length} CVE(s) encontrada(s) para ${name} ${version}!`);
       } else {
         toast.success(`Nenhuma CVE encontrada para ${name} ${version}.`);
