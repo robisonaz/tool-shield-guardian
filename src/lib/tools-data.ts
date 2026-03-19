@@ -170,14 +170,14 @@ async function fetchVersionInfo(toolName: string, version: string) {
   }
 }
 
-export async function fetchCVEsFromNVD(toolName: string, version: string): Promise<CVEEntry[]> {
+export async function fetchCVEsFromNVD(toolName: string, version: string): Promise<{ cves: CVEEntry[]; rateLimited?: boolean }> {
   try {
     const data = await nvdLookup(toolName, version);
-    if ((data as any)?.rateLimited) return [];
-    return data?.cves || [];
+    if ((data as any)?.rateLimited) return { cves: [], rateLimited: true };
+    return { cves: data?.cves || [], rateLimited: false };
   } catch (err) {
     console.error("Failed to fetch CVEs:", err);
-    return [];
+    return { cves: [], rateLimited: false };
   }
 }
 
@@ -242,12 +242,16 @@ function mapDbToEntry(row: any): ToolEntry {
 export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta"): Promise<ToolEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
+  let cveRateLimited = false;
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(name, version),
       fetchCVEsFromNVD(name, version),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
+    cveRateLimited = !!cveResult.rateLimited;
   } catch (err) {
     console.error("Erro ao buscar dados da ferramenta:", err);
   }
@@ -275,7 +279,9 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
   };
 
   const row = await createTool(toolData);
-  return mapDbToEntry(row);
+  const entry = mapDbToEntry(row);
+  (entry as any)._cveRateLimited = cveRateLimited;
+  return entry;
 }
 
 export async function removeTool(id: string) {
@@ -303,10 +309,12 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(currentName, currentVersion),
       fetchCVEsFromNVD(currentName, currentVersion),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao rechecar ferramenta:", err);
   }
@@ -356,10 +364,12 @@ export async function updateTool(id: string, name: string, version: string, sour
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(name, version),
       fetchCVEsFromNVD(name, version),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao atualizar ferramenta:", err);
   }
@@ -394,10 +404,12 @@ export async function addSubVersionToTool(toolId: string, toolName: string, vers
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(toolName, version),
       fetchCVEsFromNVD(toolName, version),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao buscar dados da sub-versão:", err);
   }
