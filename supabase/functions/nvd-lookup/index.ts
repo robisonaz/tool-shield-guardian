@@ -128,8 +128,14 @@ serve(async (req) => {
       console.log(`Fetching NVD API (keyword): ${url}`);
     }
 
+    const nvdHeaders: Record<string, string> = { "Accept": "application/json" };
+    const nvdApiKey = Deno.env.get("NVD_API_KEY");
+    if (nvdApiKey) {
+      nvdHeaders["apiKey"] = nvdApiKey;
+    }
+
     const response = await fetch(url, {
-      headers: { "Accept": "application/json" },
+      headers: nvdHeaders,
     });
 
     if (!response.ok) {
