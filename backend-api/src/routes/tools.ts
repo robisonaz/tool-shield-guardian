@@ -65,7 +65,7 @@ function normalizeVersionForNvd(toolKey: string, version: string) {
 }
 
 function buildCpeMatch(vendor: string, product: string, version: string) {
-  return `cpe:2.3:a:${vendor}:${product}:${version}:*:*:*:*:*:*:*`;
+  return `cpe:2.3:a:${vendor}:${product}:${version}`;
 }
 
 function getCpeCandidates(toolKey: string) {
@@ -120,6 +120,11 @@ async function fetchNvdResponse(url: string) {
     if (response.status === 403 || response.status === 429) {
       console.warn(`[NVD] Rate limited (${response.status}) — consider adding NVD_API_KEY to .env`);
       return { data: null, rateLimited: true };
+    }
+
+    if (response.status === 404) {
+      console.warn(`[NVD] 404 for URL: ${url} — skipping`);
+      return { data: { vulnerabilities: [], totalResults: 0 }, rateLimited: false };
     }
 
     throw new Error(`NVD API returned ${response.status}`);

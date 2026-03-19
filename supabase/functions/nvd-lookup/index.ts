@@ -148,6 +148,13 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      if (response.status === 404) {
+        return new Response(
+          JSON.stringify({ cves: [], total: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       
       throw new Error(`NVD API returned ${response.status}`);
     }
