@@ -16,6 +16,7 @@ const DEFAULT_BRANDING: BrandingSettings = {
   app_name: "SecVersions",
   app_subtitle: "Monitoramento de versões e vulnerabilidades",
   logo_url: null,
+  logo_size: 36,
   primary_color: "160 100% 45%",
   accent_color: "190 90% 50%",
 };
