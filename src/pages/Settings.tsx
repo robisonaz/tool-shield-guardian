@@ -150,6 +150,11 @@ const Settings = () => {
               <BrandingSettingsSection />
             </motion.div>
 
+            {/* Znuny Integration */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
+              <ZnunySettingsSection />
+            </motion.div>
+
             {/* OIDC Section */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
               <div className="flex items-center justify-between mb-4">
