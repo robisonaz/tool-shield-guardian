@@ -279,7 +279,9 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
   };
 
   const row = await createTool(toolData);
-  return mapDbToEntry(row);
+  const entry = mapDbToEntry(row);
+  (entry as any)._cveRateLimited = cveRateLimited;
+  return entry;
 }
 
 export async function removeTool(id: string) {
