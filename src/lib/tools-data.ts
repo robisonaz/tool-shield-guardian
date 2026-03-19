@@ -181,6 +181,22 @@ export async function fetchCVEsFromNVD(toolName: string, version: string): Promi
   }
 }
 
+async function tryOpenZnunyTicket(toolName: string, version: string, cves: CVEEntry[]) {
+  const criticals = cves.filter(c => c.severity === "critical");
+  if (criticals.length === 0) return;
+
+  try {
+    const result = await createZnunyTicket(toolName, version, criticals);
+    if (result.success) {
+      console.log(`[Znuny] Ticket criado: ${result.message}`);
+    }
+    return result;
+  } catch (err) {
+    console.error("[Znuny] Erro ao criar ticket:", err);
+    return null;
+  }
+}
+
 // ─── Database-backed CRUD ───
 
 export async function getTools(): Promise<ToolEntry[]> {
