@@ -59,6 +59,7 @@ export function BrandingSettingsSection() {
         app_name: form.app_name,
         app_subtitle: form.app_subtitle,
         logo_url: form.logo_url,
+        logo_size: form.logo_size,
         primary_color: form.primary_color,
         accent_color: form.accent_color,
       });
