@@ -404,10 +404,12 @@ export async function addSubVersionToTool(toolId: string, toolName: string, vers
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(toolName, version),
       fetchCVEsFromNVD(toolName, version),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao buscar dados da sub-versão:", err);
   }
