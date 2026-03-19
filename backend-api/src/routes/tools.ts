@@ -65,7 +65,7 @@ function normalizeVersionForNvd(toolKey: string, version: string) {
 }
 
 function buildCpeMatch(vendor: string, product: string, version: string) {
-  return `cpe:2.3:a:${vendor}:${product}:${version}:*:*:*:*:*:*:*`;
+  return `cpe:2.3:a:${vendor}:${product}:${version}`;
 }
 
 function getCpeCandidates(toolKey: string) {
