@@ -122,6 +122,11 @@ async function fetchNvdResponse(url: string) {
       return { data: null, rateLimited: true };
     }
 
+    if (response.status === 404) {
+      console.warn(`[NVD] 404 for URL: ${url} — skipping`);
+      return { data: { vulnerabilities: [], totalResults: 0 }, rateLimited: false };
+    }
+
     throw new Error(`NVD API returned ${response.status}`);
   }
 
