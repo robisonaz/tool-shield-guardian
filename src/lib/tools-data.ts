@@ -364,10 +364,12 @@ export async function updateTool(id: string, name: string, version: string, sour
   let cves: CVEEntry[] = [];
 
   try {
-    [versionResult, cves] = await Promise.all([
+    const [vr, cveResult] = await Promise.all([
       fetchVersionInfo(name, version),
       fetchCVEsFromNVD(name, version),
     ]);
+    versionResult = vr;
+    cves = cveResult.cves;
   } catch (err) {
     console.error("Erro ao atualizar ferramenta:", err);
   }
