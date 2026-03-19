@@ -108,10 +108,17 @@ function buildNvdLookupUrls(toolName: string, toolKey: string, version: string) 
 }
 
 async function fetchNvdResponse(url: string) {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const apiKey = process.env.NVD_API_KEY;
+  if (apiKey) {
+    headers["apiKey"] = apiKey;
+  }
+
+  const response = await fetch(url, { headers });
 
   if (!response.ok) {
     if (response.status === 403 || response.status === 429) {
+      console.warn(`[NVD] Rate limited (${response.status}) — consider adding NVD_API_KEY to .env`);
       return { data: null, rateLimited: true };
     }
 

@@ -170,14 +170,14 @@ async function fetchVersionInfo(toolName: string, version: string) {
   }
 }
 
-export async function fetchCVEsFromNVD(toolName: string, version: string): Promise<CVEEntry[]> {
+export async function fetchCVEsFromNVD(toolName: string, version: string): Promise<{ cves: CVEEntry[]; rateLimited?: boolean }> {
   try {
     const data = await nvdLookup(toolName, version);
-    if ((data as any)?.rateLimited) return [];
-    return data?.cves || [];
+    if ((data as any)?.rateLimited) return { cves: [], rateLimited: true };
+    return { cves: data?.cves || [], rateLimited: false };
   } catch (err) {
     console.error("Failed to fetch CVEs:", err);
-    return [];
+    return { cves: [], rateLimited: false };
   }
 }
 
