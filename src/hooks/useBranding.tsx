@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getBranding } from "@/lib/api-client";
+import { getBranding, resolveBackendUrl } from "@/lib/api-client";
 
 export interface BrandingSettings {
   id: string;
