@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getBranding } from "@/lib/api-client";
+import { getBranding, resolveBackendUrl } from "@/lib/api-client";
 
 export interface BrandingSettings {
   id: string;
@@ -54,7 +54,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
           id: data.id,
           app_name: data.app_name,
           app_subtitle: data.app_subtitle,
-          logo_url: data.logo_url,
+          logo_url: resolveBackendUrl(data.logo_url),
           primary_color: data.primary_color,
           accent_color: data.accent_color,
         };

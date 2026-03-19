@@ -2,6 +2,14 @@
 // Replaces all Supabase SDK calls
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3010/api";
+const BACKEND_BASE = API_BASE.replace(/\/api\/?$/, "");
+
+/** Resolve a backend-relative path (e.g. /uploads/...) to a full URL */
+export function resolveBackendUrl(path: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${BACKEND_BASE}${path}`;
+}
 
 interface TokenPair {
   accessToken: string;

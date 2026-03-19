@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Palette, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { resolveBackendUrl } from "@/lib/api-client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveBranding, uploadLogo } from "@/lib/api-client";
@@ -36,8 +37,7 @@ export function BrandingSettingsSection() {
     try {
       const result = await uploadLogo(file);
       setForm({ ...form, logo_url: result.logo_url });
-      setPreviewLogo(result.logo_url);
-      toast.success("Logo carregado!");
+      setPreviewLogo(resolveBackendUrl(result.logo_url));
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao fazer upload do logo.");
