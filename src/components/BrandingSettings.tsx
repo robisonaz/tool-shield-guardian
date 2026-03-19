@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Palette, Upload, Save, X } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { resolveBackendUrl } from "@/lib/api-client";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ export function BrandingSettingsSection() {
         app_name: form.app_name,
         app_subtitle: form.app_subtitle,
         logo_url: form.logo_url,
+        logo_size: form.logo_size,
         primary_color: form.primary_color,
         accent_color: form.accent_color,
       });
@@ -148,6 +150,34 @@ export function BrandingSettingsSection() {
             </div>
           </div>
         </div>
+
+        {/* Logo Size */}
+        {form.logo_url && (
+          <div className="space-y-2">
+            <Label>Tamanho do logo ({form.logo_size}px)</Label>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-muted-foreground w-6">16</span>
+              <Slider
+                value={[form.logo_size]}
+                onValueChange={([v]) => setForm({ ...form, logo_size: v })}
+                min={16}
+                max={96}
+                step={2}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-6">96</span>
+            </div>
+            <div className="flex items-center gap-3 mt-2 p-2 rounded border border-border bg-background">
+              <img
+                src={previewLogo || ""}
+                alt="Preview tamanho"
+                style={{ height: `${form.logo_size}px`, width: "auto" }}
+                className="object-contain"
+              />
+              <span className="text-xs text-muted-foreground">Pré-visualização do tamanho</span>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Tema de cores</Label>

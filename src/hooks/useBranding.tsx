@@ -6,6 +6,7 @@ export interface BrandingSettings {
   app_name: string;
   app_subtitle: string;
   logo_url: string | null;
+  logo_size: number;
   primary_color: string;
   accent_color: string;
 }
@@ -15,6 +16,7 @@ const DEFAULT_BRANDING: BrandingSettings = {
   app_name: "SecVersions",
   app_subtitle: "Monitoramento de versões e vulnerabilidades",
   logo_url: null,
+  logo_size: 36,
   primary_color: "160 100% 45%",
   accent_color: "190 90% 50%",
 };
@@ -55,6 +57,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
           app_name: data.app_name,
           app_subtitle: data.app_subtitle,
           logo_url: resolveBackendUrl(data.logo_url),
+          logo_size: data.logo_size || 36,
           primary_color: data.primary_color,
           accent_color: data.accent_color,
         };

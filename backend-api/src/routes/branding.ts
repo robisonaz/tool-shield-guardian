@@ -55,17 +55,16 @@ router.put("/", requireAuth, async (req, res) => {
   );
   if (roleCheck.length === 0) return res.status(403).json({ error: "Acesso negado" });
 
-  const { app_name, app_subtitle, logo_url, primary_color, accent_color } = req.body;
+  const { app_name, app_subtitle, logo_url, logo_size, primary_color, accent_color } = req.body;
 
   try {
-    // Check if row exists
     const { rows: existing } = await pool.query("SELECT id FROM branding_settings LIMIT 1");
 
     if (existing.length === 0) {
       const { rows } = await pool.query(
-        `INSERT INTO branding_settings (app_name, app_subtitle, logo_url, primary_color, accent_color)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [app_name, app_subtitle, logo_url, primary_color, accent_color]
+        `INSERT INTO branding_settings (app_name, app_subtitle, logo_url, logo_size, primary_color, accent_color)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [app_name, app_subtitle, logo_url, logo_size || 36, primary_color, accent_color]
       );
       return res.json(rows[0]);
     }
@@ -75,11 +74,12 @@ router.put("/", requireAuth, async (req, res) => {
         app_name = COALESCE($1, app_name),
         app_subtitle = COALESCE($2, app_subtitle),
         logo_url = $3,
-        primary_color = COALESCE($4, primary_color),
-        accent_color = COALESCE($5, accent_color),
+        logo_size = COALESCE($4, logo_size),
+        primary_color = COALESCE($5, primary_color),
+        accent_color = COALESCE($6, accent_color),
         updated_at = now()
-       WHERE id = $6 RETURNING *`,
-      [app_name, app_subtitle, logo_url, primary_color, accent_color, existing[0].id]
+       WHERE id = $7 RETURNING *`,
+      [app_name, app_subtitle, logo_url, logo_size || 36, primary_color, accent_color, existing[0].id]
     );
     res.json(rows[0]);
   } catch (err: any) {

@@ -151,11 +151,13 @@ export async function ensureSchema() {
       app_name TEXT NOT NULL DEFAULT 'SecVersions',
       app_subtitle TEXT NOT NULL DEFAULT 'Monitoramento de versões e vulnerabilidades',
       logo_url TEXT,
+      logo_size INTEGER NOT NULL DEFAULT 36,
       primary_color TEXT NOT NULL DEFAULT '160 100% 45%',
       accent_color TEXT NOT NULL DEFAULT '190 90% 50%',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE branding_settings ADD COLUMN IF NOT EXISTS logo_size INTEGER NOT NULL DEFAULT 36;
   `);
 
   // Znuny integration settings
