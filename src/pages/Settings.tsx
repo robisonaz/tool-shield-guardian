@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Save, KeyRound, Settings as SettingsIcon } from "lucide-react";
 import { BrandingSettingsSection } from "@/components/BrandingSettings";
+import { ZnunySettingsSection } from "@/components/ZnunySettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { UserManagement } from "@/components/UserManagement";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,11 @@ const Settings = () => {
             {/* Branding */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
               <BrandingSettingsSection />
+            </motion.div>
+
+            {/* Znuny Integration */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
+              <ZnunySettingsSection />
             </motion.div>
 
             {/* OIDC Section */}

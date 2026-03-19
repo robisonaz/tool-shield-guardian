@@ -158,6 +158,30 @@ export async function ensureSchema() {
     );
   `);
 
+  // Znuny integration settings
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS znuny_settings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      enabled BOOLEAN NOT NULL DEFAULT false,
+      base_url TEXT NOT NULL DEFAULT '',
+      username TEXT NOT NULL DEFAULT '',
+      password TEXT NOT NULL DEFAULT '',
+      queue TEXT NOT NULL DEFAULT 'Raw',
+      priority TEXT NOT NULL DEFAULT '3 normal',
+      ticket_type TEXT NOT NULL DEFAULT 'Unclassified',
+      customer_user TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Insert default znuny settings if empty
+  await pool.query(`
+    INSERT INTO znuny_settings (enabled, base_url)
+    SELECT false, ''
+    WHERE NOT EXISTS (SELECT 1 FROM znuny_settings);
+  `);
+
   // Insert default branding if empty
   await pool.query(`
     INSERT INTO branding_settings (app_name, app_subtitle, primary_color, accent_color)

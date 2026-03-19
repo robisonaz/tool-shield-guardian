@@ -10,6 +10,7 @@ import oidcRoutes from "./routes/oidc.js";
 import toolsRoutes from "./routes/tools.js";
 import brandingRoutes from "./routes/branding.js";
 import discoveryRoutes from "./routes/discovery.js";
+import znunyRoutes from "./routes/znuny.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3010");
@@ -31,6 +32,7 @@ app.use("/api/oidc", oidcRoutes);
 app.use("/api/tools", toolsRoutes);
 app.use("/api/branding", brandingRoutes);
 app.use("/api/discovery", discoveryRoutes);
+app.use("/api/znuny", znunyRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));

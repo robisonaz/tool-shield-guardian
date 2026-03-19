@@ -1,4 +1,4 @@
-import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion, changeToolCategory } from "@/lib/api-client";
+import { nvdLookup, fetchTools, createTool, updateToolApi, deleteTool, fetchSubVersions, createSubVersion, deleteSubVersion, changeToolCategory, createZnunyTicket } from "@/lib/api-client";
 
 export interface SubVersionEntry {
   id: string;
@@ -181,6 +181,22 @@ export async function fetchCVEsFromNVD(toolName: string, version: string): Promi
   }
 }
 
+async function tryOpenZnunyTicket(toolName: string, version: string, cves: CVEEntry[]) {
+  const criticals = cves.filter(c => c.severity === "critical");
+  if (criticals.length === 0) return;
+
+  try {
+    const result = await createZnunyTicket(toolName, version, criticals);
+    if (result.success) {
+      console.log(`[Znuny] Ticket criado: ${result.message}`);
+    }
+    return result;
+  } catch (err) {
+    console.error("[Znuny] Erro ao criar ticket:", err);
+    return null;
+  }
+}
+
 // ─── Database-backed CRUD ───
 
 export async function getTools(): Promise<ToolEntry[]> {
@@ -281,6 +297,11 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
   const row = await createTool(toolData);
   const entry = mapDbToEntry(row);
   (entry as any)._cveRateLimited = cveRateLimited;
+
+  // Auto-open Znuny ticket for critical CVEs
+  const znunyResult = await tryOpenZnunyTicket(name, version, cves);
+  if (znunyResult) (entry as any)._znunyResult = znunyResult;
+
   return entry;
 }
 
@@ -342,6 +363,10 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
 
   const row = await updateToolApi(tool.id, toolData);
   const updatedTool = mapDbToEntry(row);
+
+  // Auto-open Znuny ticket for critical CVEs
+  const znunyResult = await tryOpenZnunyTicket(currentName, currentVersion, cves);
+  if (znunyResult) (updatedTool as any)._znunyResult = znunyResult;
 
   if (tool.sub_versions?.length) {
     updatedTool.sub_versions = await Promise.all(
