@@ -297,6 +297,11 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
   const row = await createTool(toolData);
   const entry = mapDbToEntry(row);
   (entry as any)._cveRateLimited = cveRateLimited;
+
+  // Auto-open Znuny ticket for critical CVEs
+  const znunyResult = await tryOpenZnunyTicket(name, version, cves);
+  if (znunyResult) (entry as any)._znunyResult = znunyResult;
+
   return entry;
 }
 
