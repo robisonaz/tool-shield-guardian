@@ -15,7 +15,7 @@ function LoginHeader() {
   return (
     <div className="text-center mb-8">
       {branding.logo_url ? (
-        <img src={branding.logo_url} alt={branding.app_name} className="h-12 w-12 object-contain mx-auto mb-4" />
+        <img src={branding.logo_url} alt={branding.app_name} style={{ height: `${branding.logo_size}px`, width: 'auto' }} className="object-contain mx-auto mb-4" />
       ) : (
         <div className="inline-flex p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
           <ShieldCheck className="h-8 w-8 text-primary text-glow" />
