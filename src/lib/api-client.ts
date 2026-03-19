@@ -326,4 +326,42 @@ export async function getDiscoveryHistory() {
   return apiFetch<DiscoveryScanHistory[]>("/discovery/history");
 }
 
+// Znuny Integration
+export interface ZnunySettings {
+  id?: string;
+  enabled: boolean;
+  base_url: string;
+  username: string;
+  password: string;
+  queue: string;
+  priority: string;
+  ticket_type: string;
+  customer_user: string;
+}
+
+export async function getZnunySettings() {
+  return apiFetch<ZnunySettings>("/znuny");
+}
+
+export async function saveZnunySettings(data: ZnunySettings) {
+  return apiFetch<ZnunySettings>("/znuny", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function testZnunyConnection(data: { base_url: string; username: string; password: string }) {
+  return apiFetch<{ success: boolean; message: string }>("/znuny/test", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createZnunyTicket(toolName: string, version: string, cves: any[]) {
+  return apiFetch<{ success: boolean; ticketId?: string; ticketNumber?: string; message: string }>("/znuny/create-ticket", {
+    method: "POST",
+    body: JSON.stringify({ toolName, version, cves }),
+  });
+}
+
 export { getTokens, setTokens, clearTokens };
