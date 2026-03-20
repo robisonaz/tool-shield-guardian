@@ -875,6 +875,30 @@ router.post("/:id/versions", requireAuth, async (req, res) => {
   }
 });
 
+// Update sub-version
+router.put("/:id/versions/:versionId", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { id, versionId } = req.params;
+    const { version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves } = req.body;
+
+    // Verify tool ownership
+    const { rows: toolRows } = await pool.query("SELECT id FROM tools WHERE id = $1 AND user_id = $2", [id, userId]);
+    if (toolRows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
+
+    const { rows } = await pool.query(
+      `UPDATE tool_versions SET version=COALESCE($1, version), source_url=COALESCE($2, source_url), latest_version=COALESCE($3, latest_version), latest_patch_for_cycle=COALESCE($4, latest_patch_for_cycle), is_outdated=COALESCE($5, is_outdated), is_patch_outdated=COALESCE($6, is_patch_outdated), eol=COALESCE($7, eol), lts=COALESCE($8, lts), cycle_label=COALESCE($9, cycle_label), cves=COALESCE($10, cves)
+       WHERE id=$11 AND tool_id=$12 RETURNING *`,
+      [version || null, source_url !== undefined ? (source_url || null) : null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, cves ? JSON.stringify(cves) : null, versionId, id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Sub-versão não encontrada" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Update sub-version error:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
 // Delete sub-version
 router.delete("/:id/versions/:versionId", requireAuth, async (req, res) => {
   try {

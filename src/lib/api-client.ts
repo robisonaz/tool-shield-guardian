@@ -221,6 +221,13 @@ export async function createSubVersion(toolId: string, data: Record<string, any>
   });
 }
 
+export async function updateSubVersionApi(toolId: string, versionId: string, data: Record<string, any>) {
+  return apiFetch<any>(`/tools/${toolId}/versions/${versionId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteSubVersion(toolId: string, versionId: string) {
   return apiFetch(`/tools/${toolId}/versions/${versionId}`, { method: "DELETE" });
 }
