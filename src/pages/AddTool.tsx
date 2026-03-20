@@ -13,7 +13,7 @@ const AddTool = () => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
 
     try {
-      const entry = await addTool(name, version, sourceUrl);
+      const entry = await addTool(name, version, sourceUrl, category, description);
 
       if (entry.is_outdated === null) {
         toast.warning(`"${name}" não encontrada na base de versões.`);
