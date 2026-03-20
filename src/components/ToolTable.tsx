@@ -457,6 +457,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
                 sv={sv}
                 toolName={tool.name}
                 onRemove={() => onRemoveSubVersion?.(tool.id, sv.id)}
+                onEdit={onEditSubVersion ? (version, sourceUrl) => onEditSubVersion(tool.id, sv.id, tool.name, version, sourceUrl) : undefined}
               />
             ))}
 
