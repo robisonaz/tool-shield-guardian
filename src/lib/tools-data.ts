@@ -259,6 +259,7 @@ function mapDbToEntry(row: any): ToolEntry {
     name: row.name,
     version: row.version,
     source_url: row.source_url,
+    description: row.description || null,
     added_at: row.added_at || row.created_at,
     latest_version: row.latest_version,
     latest_patch_for_cycle: row.latest_patch_for_cycle,
