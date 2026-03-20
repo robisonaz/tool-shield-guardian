@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 const AddTool = () => {
   const navigate = useNavigate();
 
-  const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: any, description?: string) => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
 
     try {
