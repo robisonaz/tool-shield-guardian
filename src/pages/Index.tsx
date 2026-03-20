@@ -6,7 +6,7 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { AddToolForm } from "@/components/AddToolForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, moveToolCategory, type ToolEntry, type ToolCategory } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, editSubVersion, moveToolCategory, type ToolEntry, type ToolCategory } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
@@ -110,6 +110,18 @@ const Index = () => {
     } catch (err) {
       console.error("Erro ao remover sub-versão:", err);
       toast.error("Erro ao remover sub-versão.");
+    }
+  };
+
+  const handleEditSubVersion = async (toolId: string, versionId: string, toolName: string, version: string, sourceUrl?: string) => {
+    toast.info(`Atualizando sub-versão "${toolName} ${version}"...`);
+    try {
+      await editSubVersion(toolId, versionId, toolName, version, sourceUrl);
+      await loadTools();
+      toast.success(`Sub-versão "${version}" atualizada!`);
+    } catch (err) {
+      console.error("Erro ao editar sub-versão:", err);
+      toast.error("Erro ao editar sub-versão.");
     }
   };
 
@@ -225,7 +237,7 @@ const Index = () => {
               </Button>
             )}
           </div>
-          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} onChangeCategory={handleChangeCategory} />
+          <ToolTable tools={tools} onRemove={handleRemove} onEdit={handleEdit} onAddSubVersion={handleAddSubVersion} onRemoveSubVersion={handleRemoveSubVersion} onEditSubVersion={handleEditSubVersion} onChangeCategory={handleChangeCategory} />
         </motion.div>
       </main>
 
