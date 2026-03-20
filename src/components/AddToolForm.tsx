@@ -22,10 +22,11 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !version.trim()) return;
-    onAdd(name.trim(), version.trim(), url.trim() || undefined, category);
+    onAdd(name.trim(), version.trim(), url.trim() || undefined, category, description.trim() || undefined);
     setName("");
     setVersion("");
     setUrl("");
+    setDescription("");
     setCategory("ferramenta");
   };
 
