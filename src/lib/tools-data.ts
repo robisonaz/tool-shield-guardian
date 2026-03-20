@@ -426,7 +426,7 @@ export async function recheckTool(tool: ToolEntry): Promise<ToolEntry> {
   return updatedTool;
 }
 
-export async function updateTool(id: string, name: string, version: string, sourceUrl?: string): Promise<ToolEntry> {
+export async function updateTool(id: string, name: string, version: string, sourceUrl?: string, description?: string): Promise<ToolEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
 
