@@ -146,7 +146,7 @@ async function fetchLatestFromGitHub(repo: string): Promise<string | null> {
 
 async function fetchVersionInfo(toolName: string, version: string) {
   const empty = { latest_version: null, latest_patch_for_cycle: null, eol: null, lts: null, cycle_label: null };
-  const key = toolName.toLowerCase().trim();
+  const key = resolveToolKey(toolName);
 
   // Try GitHub releases for tools not on endoflife.date
   const ghRepo = GITHUB_REPOS[key];
