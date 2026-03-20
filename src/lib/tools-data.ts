@@ -92,14 +92,29 @@ const GITHUB_REPOS: Record<string, string> = {
 
 async function fetchLatestFromGitHub(repo: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+    // Try releases first
+    const relRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
       headers: { Accept: "application/vnd.github.v3+json" },
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const tag = data.tag_name || "";
-    const m = tag.match(/v?(\d+\.\d+(?:\.\d+)?)/);
-    return m ? m[1] : null;
+    if (relRes.ok) {
+      const data = await relRes.json();
+      const tag = data.tag_name || "";
+      const m = tag.match(/v?(\d+[\._]\d+(?:[\._]\d+)?)/);
+      if (m) return m[1].replace(/_/g, ".");
+    }
+
+    // Fallback to tags (e.g. Znuny uses "rel-7_2_3" tags without releases)
+    const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=10`, {
+      headers: { Accept: "application/vnd.github.v3+json" },
+    });
+    if (!tagRes.ok) return null;
+    const tags = await tagRes.json();
+    for (const t of tags) {
+      const name = t.name || "";
+      const m = name.match(/[\-_v]?(\d+[\._]\d+(?:[\._]\d+)?)/);
+      if (m) return m[1].replace(/_/g, ".");
+    }
+    return null;
   } catch {
     return null;
   }
