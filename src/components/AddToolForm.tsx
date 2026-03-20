@@ -97,6 +97,15 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
         </Button>
       </div>
 
+      <div className="mb-3">
+        <Input
+          placeholder="Descrição (opcional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+        />
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <Input
