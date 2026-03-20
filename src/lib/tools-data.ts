@@ -272,7 +272,7 @@ function mapDbToEntry(row: any): ToolEntry {
   };
 }
 
-export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta"): Promise<ToolEntry> {
+export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta", description?: string): Promise<ToolEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
   let cveRateLimited = false;
