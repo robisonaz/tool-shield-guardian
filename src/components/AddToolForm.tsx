@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 interface AddToolFormProps {
-  onAdd: (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => void;
+  onAdd: (name: string, version: string, sourceUrl?: string, category?: ToolCategory, description?: string) => void;
 }
 
 export function AddToolForm({ onAdd }: AddToolFormProps) {
