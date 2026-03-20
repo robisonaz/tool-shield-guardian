@@ -561,7 +561,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
   );
 }
 
-export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: ToolTableProps) {
+export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onEditSubVersion, onChangeCategory }: ToolTableProps) {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   if (tools.length === 0) {
