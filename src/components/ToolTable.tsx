@@ -238,6 +238,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
     setEditName(tool.name);
     setEditVersion(tool.version);
     setEditUrl(tool.source_url || "");
+    setEditDescription(tool.description || "");
     setEditing(false);
   };
 
