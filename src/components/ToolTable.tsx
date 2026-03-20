@@ -81,8 +81,11 @@ function CvesSummary({ cves }: { cves: { id: string; severity: "critical" | "hig
   );
 }
 
-function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolName: string; onRemove: () => void }) {
+function SubVersionRow({ sv, toolName, onRemove, onEdit }: { sv: SubVersionEntry; toolName: string; onRemove: () => void; onEdit?: (version: string, sourceUrl?: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editVersion, setEditVersion] = useState(sv.version);
+  const [editUrl, setEditUrl] = useState(sv.source_url || "");
   const status = sv.is_outdated === null ? "unknown" : sv.is_outdated ? "outdated" : "current";
   const isDiscoverySource = !!sv.source_url && /^https?:\/\/\d+\.\d+\.\d+\.\d+(?::\d+)?\/?$/i.test(sv.source_url);
   const sourceLabel = (() => {
@@ -95,11 +98,23 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
     }
   })();
 
+  const handleSaveEdit = () => {
+    if (!editVersion.trim()) return;
+    onEdit?.(editVersion.trim(), editUrl.trim() || undefined);
+    setEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditVersion(sv.version);
+    setEditUrl(sv.source_url || "");
+    setEditing(false);
+  };
+
   return (
     <>
       <tr
         className="border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors bg-secondary/10"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => !editing && setExpanded(!expanded)}
       >
         <td className="px-4 py-2 pl-10">
           {sv.cves.length > 0 || sv.latest_patch_for_cycle ? (
@@ -110,7 +125,7 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
           <div className="flex items-center gap-2 flex-wrap">
             <Layers className="h-3 w-3 text-muted-foreground/60" />
             <span>Sub-versão</span>
-            {sourceLabel && (
+            {!editing && sourceLabel && (
               <span
                 title={`${toolName} em ${sv.source_url}`}
                 className="inline-flex items-center gap-1 rounded border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-[11px] not-italic text-accent"
@@ -123,19 +138,62 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
             <EolBadge eol={sv.eol} />
           </div>
         </td>
-        <td className="px-4 py-2 text-accent text-sm">{sv.version}</td>
+        <td className="px-4 py-2 text-accent text-sm">
+          {editing ? (
+            <div className="space-y-1">
+              <Input
+                value={editVersion}
+                onChange={(e) => setEditVersion(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-6 text-xs bg-secondary border-border w-24"
+                placeholder="Versão"
+              />
+              <Input
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-6 text-xs bg-secondary border-border w-36"
+                placeholder="URL (opcional)"
+              />
+            </div>
+          ) : (
+            sv.version
+          )}
+        </td>
         <td className="px-4 py-2 text-muted-foreground text-sm">{sv.latest_version || "—"}</td>
         <td className="px-4 py-2"><StatusBadge status={status} /></td>
         <td className="px-4 py-2"><CvesSummary cves={sv.cves} /></td>
         <td className="px-4 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            {editing ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }} className="text-success hover:text-success hover:bg-success/10 h-6 w-6 p-0">
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0">
+                  <X className="h-3 w-3" />
+                </Button>
+              </>
+            ) : (
+              <>
+                {onEdit && (
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-7 w-7 p-0">
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
         </td>
       </tr>
       <AnimatePresence>
