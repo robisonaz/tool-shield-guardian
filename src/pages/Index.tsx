@@ -113,6 +113,18 @@ const Index = () => {
     }
   };
 
+  const handleEditSubVersion = async (toolId: string, versionId: string, toolName: string, version: string, sourceUrl?: string) => {
+    toast.info(`Atualizando sub-versão "${toolName} ${version}"...`);
+    try {
+      await editSubVersion(toolId, versionId, toolName, version, sourceUrl);
+      await loadTools();
+      toast.success(`Sub-versão "${version}" atualizada!`);
+    } catch (err) {
+      console.error("Erro ao editar sub-versão:", err);
+      toast.error("Erro ao editar sub-versão.");
+    }
+  };
+
   const handleChangeCategory = async (id: string, category: ToolCategory) => {
     try {
       await moveToolCategory(id, category);
