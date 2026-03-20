@@ -67,6 +67,29 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+// Alias mapping: normalize common name variants to canonical key
+const TOOL_ALIASES: Record<string, string> = {
+  "httpd": "apache",
+  "apache httpd": "apache",
+  "apache http server": "apache",
+  "apache2": "apache",
+  "node": "nodejs",
+  "node.js": "nodejs",
+  "postgres": "postgresql",
+  "mongo": "mongodb",
+  "es": "elasticsearch",
+  "k8s": "kubernetes",
+  "hashi vault": "vault",
+  "hashi consul": "consul",
+  "hashi terraform": "terraform",
+  "otrs": "znuny",
+};
+
+function resolveToolKey(name: string): string {
+  const key = name.toLowerCase().trim();
+  return TOOL_ALIASES[key] || key;
+}
+
 const PRODUCT_SLUGS: Record<string, string> = {
   gitlab: "gitlab", jenkins: "jenkins", kubernetes: "kubernetes", nginx: "nginx",
   docker: "docker-engine", terraform: "hashicorp-terraform", sonarqube: "sonarqube",
@@ -123,7 +146,7 @@ async function fetchLatestFromGitHub(repo: string): Promise<string | null> {
 
 async function fetchVersionInfo(toolName: string, version: string) {
   const empty = { latest_version: null, latest_patch_for_cycle: null, eol: null, lts: null, cycle_label: null };
-  const key = toolName.toLowerCase().trim();
+  const key = resolveToolKey(toolName);
 
   // Try GitHub releases for tools not on endoflife.date
   const ghRepo = GITHUB_REPOS[key];
