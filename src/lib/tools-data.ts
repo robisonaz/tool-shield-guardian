@@ -23,6 +23,7 @@ export interface ToolEntry {
   name: string;
   version: string;
   source_url: string | null;
+  description: string | null;
   added_at: string;
   latest_version: string | null;
   latest_patch_for_cycle: string | null;
