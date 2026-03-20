@@ -14,6 +14,7 @@ interface ToolTableProps {
   onEdit: (id: string, name: string, version: string, sourceUrl?: string, description?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+  onEditSubVersion?: (toolId: string, versionId: string, toolName: string, version: string, sourceUrl?: string) => void;
   onChangeCategory?: (id: string, category: ToolCategory) => void;
 }
 
