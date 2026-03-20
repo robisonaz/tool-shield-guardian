@@ -608,6 +608,7 @@ export function ToolTable({ tools, onRemove, onEdit, onAddSubVersion, onRemoveSu
               onEdit={onEdit}
               onAddSubVersion={onAddSubVersion}
               onRemoveSubVersion={onRemoveSubVersion}
+              onEditSubVersion={onEditSubVersion}
               onChangeCategory={onChangeCategory}
             />
           ))}
