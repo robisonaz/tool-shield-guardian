@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ToolTableProps {
   tools: ToolEntry[];
   onRemove: (id: string) => void;
-  onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
+  onEdit: (id: string, name: string, version: string, sourceUrl?: string, description?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
   onChangeCategory?: (id: string, category: ToolCategory) => void;
@@ -211,7 +211,7 @@ function SubVersionRow({ sv, toolName, onRemove }: { sv: SubVersionEntry; toolNa
 function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: {
   tool: ToolEntry;
   onRemove: (id: string) => void;
-  onEdit: (id: string, name: string, version: string, sourceUrl?: string) => void;
+  onEdit: (id: string, name: string, version: string, sourceUrl?: string, description?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
   onChangeCategory?: (id: string, category: ToolCategory) => void;
@@ -221,6 +221,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
   const [editName, setEditName] = useState(tool.name);
   const [editVersion, setEditVersion] = useState(tool.version);
   const [editUrl, setEditUrl] = useState(tool.source_url || "");
+  const [editDescription, setEditDescription] = useState(tool.description || "");
   const [newSubVersion, setNewSubVersion] = useState("");
   const [savingSubVersion, setSavingSubVersion] = useState(false);
   const status = tool.is_outdated === null ? "unknown" : tool.is_outdated ? "outdated" : "current";
@@ -229,7 +230,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
-    onEdit(tool.id, editName.trim(), editVersion.trim(), editUrl.trim() || undefined);
+    onEdit(tool.id, editName.trim(), editVersion.trim(), editUrl.trim() || undefined, editDescription.trim() || undefined);
     setEditing(false);
   };
 
@@ -237,6 +238,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
     setEditName(tool.name);
     setEditVersion(tool.version);
     setEditUrl(tool.source_url || "");
+    setEditDescription(tool.description || "");
     setEditing(false);
   };
 
@@ -331,6 +333,14 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
                 onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
                 className="h-7 text-sm bg-secondary border-border w-40"
                 placeholder="URL (opcional)"
+              />
+              <Input
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-40"
+                placeholder="Descrição (opcional)"
               />
             </div>
           ) : (
