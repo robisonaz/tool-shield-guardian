@@ -452,6 +452,7 @@ export async function updateTool(id: string, name: string, version: string, sour
     name: name.trim(),
     version: version.trim(),
     source_url: sourceUrl?.trim() || null,
+    description: description !== undefined ? (description?.trim() || null) : undefined,
     latest_version: versionResult.latest_version,
     latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
     is_outdated,

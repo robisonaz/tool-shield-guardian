@@ -334,6 +334,14 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
                 className="h-7 text-sm bg-secondary border-border w-40"
                 placeholder="URL (opcional)"
               />
+              <Input
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                className="h-7 text-sm bg-secondary border-border w-40"
+                placeholder="Descrição (opcional)"
+              />
             </div>
           ) : (
             tool.version

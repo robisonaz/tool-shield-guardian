@@ -73,10 +73,10 @@ const Index = () => {
     }
   };
 
-  const handleEdit = async (id: string, name: string, version: string, sourceUrl?: string) => {
+  const handleEdit = async (id: string, name: string, version: string, sourceUrl?: string, description?: string) => {
     toast.info(`Atualizando "${name} ${version}"...`);
     try {
-      await updateTool(id, name, version, sourceUrl);
+      await updateTool(id, name, version, sourceUrl, description);
       await loadTools();
       toast.success(`"${name} ${version}" atualizada com sucesso!`);
     } catch (err) {
