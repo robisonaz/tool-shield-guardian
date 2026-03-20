@@ -230,7 +230,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editVersion.trim()) return;
-    onEdit(tool.id, editName.trim(), editVersion.trim(), editUrl.trim() || undefined);
+    onEdit(tool.id, editName.trim(), editVersion.trim(), editUrl.trim() || undefined, editDescription.trim() || undefined);
     setEditing(false);
   };
 
