@@ -9,11 +9,11 @@ import { motion } from "framer-motion";
 const AddTool = () => {
   const navigate = useNavigate();
 
-  const handleAdd = async (name: string, version: string, sourceUrl?: string) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: any, description?: string) => {
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
 
     try {
-      const entry = await addTool(name, version, sourceUrl);
+      const entry = await addTool(name, version, sourceUrl, category, description);
 
       if (entry.is_outdated === null) {
         toast.warning(`"${name}" não encontrada na base de versões.`);

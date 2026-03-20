@@ -8,23 +8,25 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 interface AddToolFormProps {
-  onAdd: (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => void;
+  onAdd: (name: string, version: string, sourceUrl?: string, category?: ToolCategory, description?: string) => void;
 }
 
 export function AddToolForm({ onAdd }: AddToolFormProps) {
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [url, setUrl] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ToolCategory>("ferramenta");
   const [detecting, setDetecting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !version.trim()) return;
-    onAdd(name.trim(), version.trim(), url.trim() || undefined, category);
+    onAdd(name.trim(), version.trim(), url.trim() || undefined, category, description.trim() || undefined);
     setName("");
     setVersion("");
     setUrl("");
+    setDescription("");
     setCategory("ferramenta");
   };
 
@@ -93,6 +95,15 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
           )}
           {detecting ? "Detectando..." : "Detectar Versão"}
         </Button>
+      </div>
+
+      <div className="mb-3">
+        <Input
+          placeholder="Descrição (opcional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">

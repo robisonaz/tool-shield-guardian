@@ -23,6 +23,7 @@ export interface ToolEntry {
   name: string;
   version: string;
   source_url: string | null;
+  description: string | null;
   added_at: string;
   latest_version: string | null;
   latest_patch_for_cycle: string | null;
@@ -258,6 +259,7 @@ function mapDbToEntry(row: any): ToolEntry {
     name: row.name,
     version: row.version,
     source_url: row.source_url,
+    description: row.description || null,
     added_at: row.added_at || row.created_at,
     latest_version: row.latest_version,
     latest_patch_for_cycle: row.latest_patch_for_cycle,
@@ -271,7 +273,7 @@ function mapDbToEntry(row: any): ToolEntry {
   };
 }
 
-export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta"): Promise<ToolEntry> {
+export async function addTool(name: string, version: string, sourceUrl?: string, category: ToolCategory = "ferramenta", description?: string): Promise<ToolEntry> {
   let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
   let cves: CVEEntry[] = [];
   let cveRateLimited = false;
@@ -299,6 +301,7 @@ export async function addTool(name: string, version: string, sourceUrl?: string,
     name: name.trim(),
     version: version.trim(),
     source_url: sourceUrl?.trim() || null,
+    description: description?.trim() || null,
     latest_version: versionResult.latest_version,
     latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
     is_outdated,

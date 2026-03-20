@@ -29,12 +29,12 @@ const Index = () => {
     loadTools();
   }, []);
 
-  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: ToolCategory) => {
+  const handleAdd = async (name: string, version: string, sourceUrl?: string, category?: ToolCategory, description?: string) => {
     setAddDialogOpen(false);
     toast.info(`Buscando CVEs para "${name} ${version}" na base NVD/NIST...`);
     
     try {
-      const entry = await addTool(name, version, sourceUrl, category);
+      const entry = await addTool(name, version, sourceUrl, category, description);
       await loadTools();
 
       if (entry.is_outdated === null) {

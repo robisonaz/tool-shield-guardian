@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS tools (
   name TEXT NOT NULL,
   version TEXT NOT NULL,
   source_url TEXT,
+  description TEXT,
   latest_version TEXT,
   latest_patch_for_cycle TEXT,
   is_outdated BOOLEAN,

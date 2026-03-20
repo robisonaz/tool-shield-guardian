@@ -91,6 +91,7 @@ export async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE tools ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'ferramenta';
+    ALTER TABLE tools ADD COLUMN IF NOT EXISTS description TEXT;
     CREATE INDEX IF NOT EXISTS idx_tools_user_id ON tools(user_id);
   `);
 
