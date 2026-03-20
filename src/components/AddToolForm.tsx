@@ -15,6 +15,7 @@ export function AddToolForm({ onAdd }: AddToolFormProps) {
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [url, setUrl] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ToolCategory>("ferramenta");
   const [detecting, setDetecting] = useState(false);
 
