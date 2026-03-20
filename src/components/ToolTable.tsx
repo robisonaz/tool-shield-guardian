@@ -281,7 +281,7 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
               list="edit-tool-suggestions"
             />
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {tool.name}
               {tool.source_url ? (
                 /^https?:\/\/\d+\.\d+\.\d+\.\d+:\d+\/?$/.test(tool.source_url) ? (
@@ -303,6 +303,9 @@ function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, 
               <LtsBadge lts={tool.lts} />
               <EolBadge eol={tool.eol} />
             </div>
+            {tool.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{tool.description}</p>
+            )}
           )}
           <datalist id="edit-tool-suggestions">
             {AVAILABLE_TOOLS.map(t => <option key={t} value={t} />)}
