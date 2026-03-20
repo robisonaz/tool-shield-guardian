@@ -734,12 +734,12 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { id } = req.params;
-    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves, category } = req.body;
+    const { name, version, source_url, latest_version, latest_patch_for_cycle, is_outdated, is_patch_outdated, eol, lts, cycle_label, cves, category, description } = req.body;
 
     const { rows } = await pool.query(
-      `UPDATE tools SET name=$1, version=$2, source_url=$3, latest_version=$4, latest_patch_for_cycle=$5, is_outdated=$6, is_patch_outdated=$7, eol=$8, lts=$9, cycle_label=$10, cves=$11, category=COALESCE($14, category)
+      `UPDATE tools SET name=$1, version=$2, source_url=$3, latest_version=$4, latest_patch_for_cycle=$5, is_outdated=$6, is_patch_outdated=$7, eol=$8, lts=$9, cycle_label=$10, cves=$11, category=COALESCE($14, category), description=COALESCE($15, description)
        WHERE id=$12 AND user_id=$13 RETURNING *`,
-      [name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || []), id, userId, category || null]
+      [name, version, source_url || null, latest_version || null, latest_patch_for_cycle || null, is_outdated ?? null, is_patch_outdated ?? null, eol ?? null, lts ?? null, cycle_label || null, JSON.stringify(cves || []), id, userId, category || null, description !== undefined ? (description || null) : undefined]
     );
     if (rows.length === 0) return res.status(404).json({ error: "Ferramenta não encontrada" });
     res.json(rows[0]);
