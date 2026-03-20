@@ -267,12 +267,13 @@ function SubVersionRow({ sv, toolName, onRemove, onEdit }: { sv: SubVersionEntry
   );
 }
 
-function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onChangeCategory }: {
+function ToolRow({ tool, onRemove, onEdit, onAddSubVersion, onRemoveSubVersion, onEditSubVersion, onChangeCategory }: {
   tool: ToolEntry;
   onRemove: (id: string) => void;
   onEdit: (id: string, name: string, version: string, sourceUrl?: string, description?: string) => void;
   onAddSubVersion?: (toolId: string, toolName: string, version: string) => void;
   onRemoveSubVersion?: (toolId: string, versionId: string) => void;
+  onEditSubVersion?: (toolId: string, versionId: string, toolName: string, version: string, sourceUrl?: string) => void;
   onChangeCategory?: (id: string, category: ToolCategory) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
