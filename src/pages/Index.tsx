@@ -6,7 +6,7 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { AddToolForm } from "@/components/AddToolForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, moveToolCategory, type ToolEntry, type ToolCategory } from "@/lib/tools-data";
+import { addTool, getTools, removeTool, recheckTool, updateTool, addSubVersionToTool, removeSubVersion, editSubVersion, moveToolCategory, type ToolEntry, type ToolCategory } from "@/lib/tools-data";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
