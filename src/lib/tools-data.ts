@@ -87,6 +87,7 @@ const PRODUCT_SLUGS: Record<string, string> = {
 const GITHUB_REPOS: Record<string, string> = {
   jumpserver: "jumpserver/jumpserver",
   foreman: "theforeman/foreman",
+  znuny: "znuny/Znuny",
 };
 
 async function fetchLatestFromGitHub(repo: string): Promise<string | null> {

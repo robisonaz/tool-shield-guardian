@@ -43,6 +43,8 @@ const CPE_MAP: Record<string, { vendor: string; product: string }> = {
   go: { vendor: "golang", product: "go" },
   java: { vendor: "oracle", product: "jdk" },
   dotnet: { vendor: "microsoft", product: ".net" },
+  znuny: { vendor: "znuny", product: "znuny" },
+  otrs: { vendor: "otrs", product: "otrs" },
 };
 
 interface NvdCve {
