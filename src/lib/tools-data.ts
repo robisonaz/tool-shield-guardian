@@ -510,6 +510,45 @@ export async function removeSubVersion(toolId: string, versionId: string) {
   await deleteSubVersion(toolId, versionId);
 }
 
+export async function editSubVersion(toolId: string, versionId: string, toolName: string, version: string, sourceUrl?: string): Promise<SubVersionEntry> {
+  let versionResult = { latest_version: null as string | null, latest_patch_for_cycle: null as string | null, eol: null as any, lts: null as any, cycle_label: null as string | null };
+  let cves: CVEEntry[] = [];
+
+  try {
+    const [vr, cveResult] = await Promise.all([
+      fetchVersionInfo(toolName, version),
+      fetchCVEsFromNVD(toolName, version),
+    ]);
+    versionResult = vr;
+    cves = cveResult.cves;
+  } catch (err) {
+    console.error("Erro ao atualizar sub-versão:", err);
+  }
+
+  const is_outdated = versionResult.latest_version
+    ? compareVersions(version, versionResult.latest_version) < 0
+    : null;
+  const is_patch_outdated = versionResult.latest_patch_for_cycle
+    ? compareVersions(version, versionResult.latest_patch_for_cycle) < 0
+    : null;
+
+  const data = {
+    version: version.trim(),
+    source_url: sourceUrl?.trim() || null,
+    latest_version: versionResult.latest_version,
+    latest_patch_for_cycle: versionResult.latest_patch_for_cycle,
+    is_outdated,
+    is_patch_outdated,
+    eol: versionResult.eol != null ? String(versionResult.eol) : null,
+    lts: versionResult.lts != null ? String(versionResult.lts) : null,
+    cycle_label: versionResult.cycle_label,
+    cves,
+  };
+
+  const row = await updateSubVersionApi(toolId, versionId, data);
+  return mapDbToSubVersion(row);
+}
+
 export async function moveToolCategory(toolId: string, category: ToolCategory): Promise<ToolEntry> {
   const row = await changeToolCategory(toolId, category);
   return mapDbToEntry(row);
